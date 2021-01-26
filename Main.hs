@@ -52,9 +52,6 @@ main = do
   -- Hoare sequence example
   putStrLn $ "Hoare sequence example: " ++ show (hoareSequence hoareAssignmentEg hoareSkipEg)
   -- Hoare conditional example
-  let b = BEq (AId 'X') (ANum 0)
-  let p = BLe (AId 'X') (ANum 10)
-  let q = BEq (AId 'X') (ANum 3)
-  let c1 = CSequence (CAssign 'X' (ANum 1)) (CAssign 'X' (ANum 3))
-  let c2 = CAssign 'X' (ANum 3)
-  putStrLn $ "Hoare conditional example: " ++ show (hoareConditional (HoareTriple (BAnd b p) c1 q) (HoareTriple (BAnd (BNot b) p) c2 q))
+  let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+  let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+  putStrLn $ "Hoare conditional example: " ++ show (hoareConditional eg1 eg2)
