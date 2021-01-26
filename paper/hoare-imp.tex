@@ -603,12 +603,12 @@ That is, given the precondition that \texttt{3 = 3}, the assignment \texttt{X :=
 
 \subsubsection{H-Sequence}
 
-For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent).
+For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent). We avoid full evaluation and rely on \texttt{boptimize}.
 
 \begin{lstlisting}
 hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
 hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
-  | q1 == q2 = Right $ HoareTriple p (CSequence c1 c2) r
+  | boptimize q1 == boptimize q2 = Right $ HoareTriple p (CSequence c1 c2) r
   | otherwise = Left "Cannot construct proof"
 \end{lstlisting}
 
@@ -623,18 +623,18 @@ Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
 
 \subsubsection{H-Conditional}
 
-For the Hoare conditional rule, similarly to the Hoare sequence rule, we are checking whether the corresponding values match.
+For the Hoare conditional rule, similarly to the Hoare sequence rule, we rely on \texttt{boptimize} for checking whether the corresponding values match.
 
 \begin{lstlisting}
 hoareConditional :: HoareTriple -> HoareTriple -> Either String HoareTriple
 hoareConditional (HoareTriple (BAnd b1 p1) c1 q1) (HoareTriple (BAnd (BNot b2) p2) c2 q2)
-  | b1 == b2 &&
-    p1 == p2 &&
-    q1 == q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | boptimize b1 == boptimize b2 &&
+    boptimize p1 == boptimize p2 &&
+    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional (HoareTriple (BAnd p1 b1) c1 q1) (HoareTriple (BAnd (BNot p2) b2) c2 q2)
-  | b1 == b2 &&
-    p1 == p2 &&
-    q1 == q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | boptimize b1 == boptimize b2 &&
+    boptimize p1 == boptimize p2 &&
+    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
   | otherwise = Left "Cannot construct proof"
 hoareConditional _ _ = Left "Cannot construct proof"
 \end{lstlisting}

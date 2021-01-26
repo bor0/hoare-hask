@@ -10,7 +10,6 @@ data Command =
   | CIfElse Bexp Command Command
   | CWhile Bexp Command
   | CAssert Bexp Command Bexp
-  deriving Eq
 
 instance Show Command where
   show CSkip           = ";"
