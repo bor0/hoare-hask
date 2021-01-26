@@ -493,7 +493,7 @@ In the previous chapter, we implemented assertions (\texttt{CAssert}) at the run
 
 Some programming languages, like Python, don't have a compile step and the \texttt{eval} function we provided is kind of equivalent to evaluating programs in Python. But some programming languages do have a compile step, like C or Haskell, and this compilation step can be beneficial in that it can do additional different checks, e.g., type checks. That's what we'll do here - implement a "compile"-time check (just another evaluation strategy) using some of the rules in Hoare's logic, and this check can be used to check the validity of a program, before fully evaluating it.
 
-We list the rules of Hoare logic, as outlined in the original paper\cite{b7}.
+We list the rules of Hoare logic, some of them outlined in the original paper\cite{b7}. However, we will only provide an implementation for some of them.
 
 \[
 \AxiomC{}
@@ -513,15 +513,22 @@ We list the rules of Hoare logic, as outlined in the original paper\cite{b7}.
 \]
 \hfill
 \[
+\AxiomC{$\{B \land P\}S\{P\}$}
+\RightLabel{(H-While)}
+\UnaryInfC{$\{P\}\texttt{while }B\texttt{ do }S\{\neg B \land P\}$}
+\DisplayProof
+\quad
+\quad
 \AxiomC{$\{B \land P\}S\{Q\} , \{\neg B \land P\}T\{Q\}$}
 \RightLabel{(H-Conditional)}
 \UnaryInfC{$\{P\}\texttt{if }B\texttt{ then }S\texttt{ else } T\{Q\}$}
 \DisplayProof
-\quad
-\quad
-\AxiomC{$\{B \land P\}S\{P\}$}
-\RightLabel{(H-While)}
-\UnaryInfC{$\{P\}\texttt{while }B\texttt{ do }S\{\neg B \land P\}$}
+\]
+\hfill
+\[
+\AxiomC{$P_1 \to P_2 , \{P_2\}S\{Q_2\} , Q_2 \to Q_1$}
+\RightLabel{(H-Consequence)}
+\UnaryInfC{$\{P_1\} S \{Q_1\}$}
 \DisplayProof
 \]
 
