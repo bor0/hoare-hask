@@ -58,5 +58,3 @@ main = do
   let c1 = CSequence (CAssign 'X' (ANum 1)) (CAssign 'X' (ANum 3))
   let c2 = CAssign 'X' (ANum 3)
   putStrLn $ "Hoare conditional example: " ++ show (hoareConditional (HoareTriple (BAnd b p) c1 q) (HoareTriple (BAnd (BNot b) p) c2 q))
-  -- Hoare while example
-  putStrLn $ "Hoare while example: " ++ show (hoareWhile (HoareTriple (BAnd b p) c2 p))

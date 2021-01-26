@@ -48,10 +48,3 @@ hoareConditional (HoareTriple (BAnd p1 b1) c1 q1) (HoareTriple (BAnd (BNot p2) b
     q1 == q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
   | otherwise                    = Left "Cannot construct proof"
 hoareConditional _ _ = Left "Cannot construct proof"
-
--- | Hoare while rule
-hoareWhile :: HoareTriple -> Either String HoareTriple
-hoareWhile (HoareTriple (BAnd b p1) c p2)
-  | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (BAnd (BNot b) p2)
-  | otherwise = Left "Cannot construct proof"
-hoareWhile _ = Left "Cannot construct proof"
