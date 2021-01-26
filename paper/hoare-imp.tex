@@ -175,7 +175,7 @@ Similarly to \texttt{aoptimize}, we list the evaluation rules for optimizing a b
 \quad
 \AxiomC{$v_1 \neq v_2$}
 \RightLabel{(B-Eq-Id-False)}
-\UnaryInfC{$\texttt{BEq} \ \#v_1 \ \#v_2 \hookrightarrow \texttt{BFalse}$}
+\UnaryInfC{$\texttt{BEq} \ \#v_1 \ \#v_2 \hookrightarrow \texttt{BEq} \ \#v_1 \ \#v_2$}
 \DisplayProof
 \]
 \hfill
@@ -210,7 +210,7 @@ These rules translate to the following implementation in Haskell:
 \begin{lstlisting}
 boptimize :: Bexp -> Bexp
 boptimize (BEq (ANum a1) (ANum a2)) = if a1 == a2 then BTrue else BFalse
-boptimize (BEq (AId v1) (AId v2)) = if v1 == v2 then BTrue else BFalse
+boptimize (BEq (AId v1) (AId v2)) = if v1 == v2 then BTrue else BEq (AId v1) (AId v2)
 boptimize (BNot BTrue) = BFalse
 boptimize (BNot BFalse) = BTrue
 boptimize (BAnd BFalse _) = BFalse

@@ -21,7 +21,7 @@ instance Show Bexp where
 
 boptimize :: Bexp -> Bexp
 boptimize (BEq (ANum a1) (ANum a2)) = if a1 == a2 then BTrue else BFalse
-boptimize (BEq (AId v1) (AId v2))   = if v1 == v2 then BTrue else BFalse
+boptimize (BEq (AId v1) (AId v2))   = if v1 == v2 then BTrue else BEq (AId v1) (AId v2)
 boptimize (BNot BTrue)         = BFalse
 boptimize (BNot BFalse)        = BTrue
 boptimize (BAnd BFalse _)      = BFalse
