@@ -560,7 +560,7 @@ Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurren
 \begin{lstlisting}
 hoareAssignment :: Command -> Bexp -> Either String HoareTriple
 hoareAssignment (CAssign v e) q = Right $ HoareTriple (substAssignment (boptimize q) (aoptimize e) v) (CAssign v e) q
-hoareAssginment _ _ = Left "Cannot construct proof"
+hoareAssignment _ _ = Left "Cannot construct proof"
 \end{lstlisting}
 
 We rely on the optimizing functions to further simplify calculations.

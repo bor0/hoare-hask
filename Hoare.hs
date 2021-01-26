@@ -18,7 +18,7 @@ hoareSkip _ _     = Left "Cannot construct proof"
 -- | Hoare assignment rule
 hoareAssignment :: Command -> Bexp -> Either String HoareTriple
 hoareAssignment (CAssign v e) q = Right $ HoareTriple (substAssignment (boptimize q) (aoptimize e) v) (CAssign v e) q
-hoareAssginment _ _             = Left "Cannot construct proof"
+hoareAssignment _ _             = Left "Cannot construct proof"
 
 -- Q[E/V] is the result of replacing in Q all occurrences of V by E
 substAssignment :: Bexp -> Aexp -> Char -> Bexp
