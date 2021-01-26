@@ -613,7 +613,7 @@ Several commands can be chained as follows:
 > let c1 = hoareAssignment (CAssign 'Y' (ANum 1)) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
 > let c2 = hoareAssignment (CAssign 'Z' (AId 'X')) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'Z') (AId 'X')))
 > whenRight c1 (\c1' -> whenRight c2 (\c2' -> hoareSequence c1' c2'))
-Right {1 == 1 && X == X} Y := 1;;Z := X;; {Y == 1 && Z == X}
+Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
 \end{lstlisting}
 
 \subsubsection{H-Conditional}
@@ -643,7 +643,7 @@ An example usage of the rule:
 > let c1 = CSequence (CAssign 'X' (ANum 1)) (CAssign 'X' (ANum 3))
 > let c2 = CAssign 'X' (ANum 3)
 > hoareConditional (HoareTriple (BAnd b p) c1 q) (HoareTriple (BAnd (BNot b) p) c2 q)
-Right {X <= 10} (If (X == 0) Then (X := 1;;X := 3;;) Else (X := 3;)); {X == 3}
+Right {X <= 10} (If (X == 0) Then (X := 1; X := 3;) Else (X := 3;)); {X == 3}
 \end{lstlisting}
 
 \subsubsection{H-While}
