@@ -582,6 +582,8 @@ substAssignment q@(BEq (AId x) y) e v
 substAssignment q@(BEq x (AId y)) e v
   | y == v = BEq e (AId y)
   | otherwise = q
+substAssignment (BAnd b1 b2) e v = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
+substAssignment (BNot b) e v = BNot (substAssignment b e v)
 substAssignment q _ _ = q
 \end{lstlisting}
 
@@ -608,10 +610,10 @@ hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
 Several commands can be chained as follows:
 
 \begin{lstlisting}
-> let c1 = hoareAssignment (CAssign 'X' (ANum 3)) (BEq (AId 'X') (ANum 3))
-> let c2 = hoareSkip CSkip (BEq (AId 'X') (ANum 3))
+> let c1 = hoareAssignment (CAssign 'Y' (ANum 1)) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
+> let c2 = hoareAssignment (CAssign 'Z' (AId 'X')) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'Z') (AId 'X')))
 > whenRight c1 (\c1' -> whenRight c2 (\c2' -> hoareSequence c1' c2'))
-Right {3 == 3} X := 3;;;; {X == 3}
+Right {1 == 1 && X == X} Y := 1;;Z := X;; {Y == 1 && Z == X}
 \end{lstlisting}
 
 \subsubsection{H-Conditional}
