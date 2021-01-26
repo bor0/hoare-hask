@@ -11,14 +11,12 @@ instance Show HoareTriple where
   show (HoareTriple pre c post) = "{" ++ show pre ++ "} " ++ show c ++ " {" ++ show post ++ "}"
 
 -- | Hoare skip rule
-hoareSkip :: Command -> Bexp -> Either String HoareTriple
-hoareSkip CSkip q = Right $ HoareTriple q CSkip q
-hoareSkip _ _     = Left "Cannot construct proof"
+hoareSkip :: Bexp -> HoareTriple
+hoareSkip q = HoareTriple q CSkip q
 
 -- | Hoare assignment rule
-hoareAssignment :: Command -> Bexp -> Either String HoareTriple
-hoareAssignment (CAssign v e) q = Right $ HoareTriple (substAssignment (boptimize q) (aoptimize e) v) (CAssign v e) q
-hoareAssignment _ _             = Left "Cannot construct proof"
+hoareAssignment :: Char -> Aexp -> Bexp -> HoareTriple
+hoareAssignment v e q = HoareTriple (substAssignment (boptimize q) (aoptimize e) v) (CAssign v e) q
 
 -- Q[E/V] is the result of replacing in Q all occurrences of V by E
 substAssignment :: Bexp -> Aexp -> Char -> Bexp

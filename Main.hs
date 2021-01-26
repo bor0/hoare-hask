@@ -44,13 +44,13 @@ main = do
   putStrLn $ "(PASS) Assert {X=5} factX {Y=120} (object): " ++ show (eval (M.fromList [('X', 5)]) (factAssertion CAssert))
   putStrLn $ "(FAIL) Assert {X=4} factX {Y=120} (object): " ++ show (eval (M.fromList [('X', 4)]) (factAssertion CAssert))
   -- Hoare skip example
-  let hoareSkipEg = hoareSkip CSkip (BEq (AId 'X') (ANum 3))
+  let hoareSkipEg = hoareSkip (BEq (AId 'X') (ANum 3))
   putStrLn $ "Hoare skip example: " ++ show hoareSkipEg
   -- Hoare assignment example
-  let hoareAssignmentEg = hoareAssignment (CAssign 'X' (ANum 3)) (BEq (AId 'X') (ANum 3))
+  let hoareAssignmentEg = hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
   putStrLn $ "Hoare assignment example: " ++ show hoareAssignmentEg
   -- Hoare sequence example
-  putStrLn $ "Hoare sequence example: " ++ show (whenRight hoareAssignmentEg (\eg1 -> whenRight hoareSkipEg (\eg2 -> hoareSequence eg1 eg2)))
+  putStrLn $ "Hoare sequence example: " ++ show (hoareSequence hoareAssignmentEg hoareSkipEg)
   -- Hoare conditional example
   let b = BEq (AId 'X') (ANum 0)
   let p = BLe (AId 'X') (ANum 10)

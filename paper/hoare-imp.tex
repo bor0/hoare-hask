@@ -538,12 +538,11 @@ data HoareTriple = HoareTriple Bexp Command Bexp
 We will provide the Haskell implementation of the Hoare skip rule; more specifically, this rule can only be constructed for the \texttt{CSkip} command.
 
 \begin{lstlisting}
-hoareSkip :: Command -> Bexp -> Either String HoareTriple
-hoareSkip CSkip q = Right $ HoareTriple q CSkip q
-hoareSkip _ _ = Left "Cannot construct proof"
+hoareSkip :: Bexp -> HoareTriple
+hoareSkip q = HoareTriple q CSkip q
 \end{lstlisting}
 
-As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms:
+With an example usage:
 
 \begin{lstlisting}
 > hoareSkip CSkip (BEq (ANum 3) (ANum 3))
@@ -558,9 +557,8 @@ Left "Cannot construct proof"
 Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurrence of \texttt{V} is replaced with \texttt{E}. Given an assignment command \texttt{V := E}, it should produce the triple where the precondition is \texttt{Q[E/V]} and the postcondition is \texttt{Q}, for any \texttt{Q}.
 
 \begin{lstlisting}
-hoareAssignment :: Command -> Bexp -> Either String HoareTriple
-hoareAssignment (CAssign v e) q = Right $ HoareTriple (substAssignment (boptimize q) (aoptimize e) v) (CAssign v e) q
-hoareAssignment _ _ = Left "Cannot construct proof"
+hoareAssignment :: Char -> Aexp -> Bexp -> HoareTriple
+hoareAssignment v e q = HoareTriple (substAssignment (boptimize q) (aoptimize e) v) (CAssign v e) q
 \end{lstlisting}
 
 We rely on the optimizing functions to further simplify calculations.
@@ -607,7 +605,7 @@ hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
   | otherwise = Left "Cannot construct proof"
 \end{lstlisting}
 
-Several commands can be chained as follows:
+Move this out. As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms. Several commands can be chained as follows:
 
 \begin{lstlisting}
 > let c1 = hoareAssignment (CAssign 'Y' (ANum 1)) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
