@@ -598,7 +598,7 @@ substBexp (BNot b) e v = BNot (substBexp b e v)
 substBexp q _ _ = q
 \end{lstlisting}
 
-In this case, the implementation will rewrite a variable with an arithmetical expression within a boolean expression. Given this definition, some proofs can be deduced, such as:
+This implementation will rewrite a variable with an arithmetical expression within a boolean expression. Given this definition, some proofs can be deduced, such as:
 
 \begin{lstlisting}
 > hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
@@ -695,7 +695,7 @@ Even though our implementation and its substitution and optimization rules are s
 {b == A && (a - b) == B} a := (a - b); {b == A && a == B}
 \end{lstlisting}
 
-That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B} using some set of commands - the function to swap the values between two variables.
+That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B}. We proved that this set of commands will swap the values between two variables.
 
 \section{Conclusion}
 
