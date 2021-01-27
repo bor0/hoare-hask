@@ -29,9 +29,11 @@ substAssignment q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | otherwise                    = q
 substAssignment q@(BEq (AId x) y) e v
   | x == v    = BEq e y
+  | y == e    = BEq (AId x) (AId v)
   | otherwise = q
 substAssignment q@(BEq x (AId y)) e v
-  | y == v    = BEq e (AId y)
+  | x == e    = BEq (AId v) (AId y)
+  | y == v    = BEq x e
   | otherwise = q
 substAssignment (BAnd b1 b2) e v = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
 substAssignment (BNot b) e v     = BNot (substAssignment b e v)

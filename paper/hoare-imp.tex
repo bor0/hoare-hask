@@ -558,7 +558,7 @@ With an example usage:
 {TRUE} ; {TRUE}
 \end{lstlisting}
 
-Note how we rely on the optimizing functions to further simplify calculations.
+We rely on the optimizing functions to further simplify calculations. Note that the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
 
 \subsubsection{H-Assign}
 
@@ -586,9 +586,11 @@ In this paper, the substitution will contain a concrete set of mathematical rewr
 substAssignment :: Bexp -> Aexp -> Char -> Bexp
 substAssignment q@(BEq (AId x) y) e v
   | x == v = BEq e y
+  | y == e = BEq (AId x) (AId v)
   | otherwise = q
 substAssignment q@(BEq x (AId y)) e v
-  | y == v = BEq e (AId y)
+  | x == e = BEq (AId v) (AId y)
+  | y == v = BEq x e
   | otherwise = q
 substAssignment (BAnd b1 b2) e v = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
 substAssignment (BNot b) e v = BNot (substAssignment b e v)
