@@ -325,23 +325,23 @@ beval ctx (BNot b1) = not (beval ctx b1)
 beval ctx (BAnd b1 b2) = beval ctx b1 && beval ctx b2
 \end{lstlisting}
 
-For example, the single-step optimization values can be used as following:
+For example, the single-step optimization functions can be used as following:
 
 \begin{lstlisting}
-> let expr = BNot BTrue in "Optimize: " ++ show expr ++ " = " ++ show (boptimize expr)
+> let e = BNot BTrue in "Optimize: " ++ show e ++ " = " ++ show (boptimize e)
 Optimize: ! (TRUE) = FALSE
-> let expr = APlus (ANum 2) (ANum 5) in "Optimize: " ++ show expr ++ " = " ++ show (aoptimize expr)
+> let e = APlus (ANum 2) (ANum 5) in "Optimize: " ++ show e ++ " = " ++ show (aoptimize e)
 Optimize: 2 + 5 = 7
 \end{lstlisting}
 
 However, since the single-step evaluation strategy does not rely on any context, it will not be able to deduce much about expressions that involve variables, e.g. \texttt{X + 5}, while \texttt{aeval} can substitute for this variable, given a context:
 
 \begin{lstlisting}
-> let expr = APlus (AId 'X') (ANum 5) in "Optimize: " ++ show expr ++ " = " ++ show (aoptimize expr)
+> let e = APlus (AId 'X') (ANum 5) in "Optimize: " ++ show e ++ " = " ++ show (aoptimize e)
 Optimize: X + 5 = X + 5
-> let expr = APlus (AId 'X') (ANum 5) in show expr ++ " = " ++ show (aeval (M.fromList [('X', 5)]) expr)
+> let e = APlus (AId 'X') (ANum 5) in show e ++ " = " ++ show (aeval (M.fromList [('X', 5)]) e)
 X + 5 = 10
-> let expr = BEq (AId 'X') (ANum 5) in show expr ++ " = " ++ show (beval (M.fromList [('X', 5)]) expr)
+> let e = BEq (AId 'X') (ANum 5) in show e ++ " = " ++ show (beval (M.fromList [('X', 5)]) e)
 X == 5 = True
 \end{lstlisting}
 
@@ -449,7 +449,7 @@ eval ctx (CAssert b1 c b2) =
   else Left "Pre-condition does not match!"
 \end{lstlisting}
 
-Note that this language is not strongly normalizing because of \texttt{CWhile}; consider the evaluation of \texttt{CWhile BTrue CSkip}.
+Note that this language is not strongly normalizing; consider the evaluation of \texttt{CWhile BTrue CSkip}.
 
 As an example, the factorial program (sequence of commands) can be represented with the pseudo-code:
 
@@ -475,9 +475,9 @@ That is, this program will calculate \texttt{Y := X!}. Here's an implementation 
 | :}
 > eval (M.fromList [('X', 5)]) fact_X
 Right (fromList [('X',5),('Y',120),('Z',0)])
-> let expr = CAssert (BEq (ANum 5) (AId 'X')) factX (BEq (ANum 120) (AId 'Y')) in "Assert {X=5} factX {Y=120}: " ++ show (eval (M.fromList [('X', 5)]) expr)
+> let e = CAssert (BEq (ANum 5) (AId 'X')) factX (BEq (ANum 120) (AId 'Y')) in "Assert {X=5} factX {Y=120}: " ++ show (eval (M.fromList [('X', 5)]) e)
 Assert {X=5} factX {Y=120}: Right (fromList [('X',5),('Y',120),('Z',0)])
-> let expr = CAssert (BEq (ANum 4) (AId 'X')) factX (BEq (ANum 120) (AId 'Y')) in "Assert {X=4} factX {Y=120}: " ++ show (eval (M.fromList [('X', 5)]) expr)
+> let e = CAssert (BEq (ANum 4) (AId 'X')) factX (BEq (ANum 120) (AId 'Y')) in "Assert {X=4} factX {Y=120}: " ++ show (eval (M.fromList [('X', 5)]) e)
 Assert {X=4} factX {Y=120}: Left "Pre-condition does not match!"
 \end{lstlisting}
 
@@ -534,11 +534,11 @@ We represent the Hoare triple as a product of a command, a precondition (\texttt
 data HoareTriple = HoareTriple Bexp Command Bexp
 \end{lstlisting}
 
-Rules should not be manually constructed using \texttt{HoareTriple}, rather through the functions that we provide next.
+Triples should not be constructed with \texttt{HoareTriple}, rather through the functions/rules that we provide next.
 
 \subsubsection{H-Skip}
 
-We provide the Haskell implementation of the Hoare skip rule.
+The Haskell implementation of the Hoare skip rule can be represented as follows:
 
 \begin{lstlisting}
 hoareSkip :: Bexp -> HoareTriple
@@ -590,7 +590,7 @@ substBexp (BNot b) e v = BNot (substBexp b e v)
 substBexp q _ _ = q
 \end{lstlisting}
 
-This implementation will rewrite a variable with an arithmetical expression within a boolean expression. Given this definition, some proofs can be deduced, such as:
+This implementation will rewrite a variable with an arithmetical expression within a boolean expression. We can now deduce some proofs, such as:
 
 \begin{lstlisting}
 > hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
@@ -676,7 +676,7 @@ Right {TRUE} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
 
 \subsection{Example proof: Swap}
 
-Even though our implementation is simple enough, it can still prove some very useful facts. Consider the following:
+Even though the implementation is simple enough, it can still be used to prove some useful facts:
 
 \begin{lstlisting}
 > hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
