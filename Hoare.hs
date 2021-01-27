@@ -18,27 +18,27 @@ hoareSkip q = HoareTriple (boptimize q) CSkip (boptimize q)
 hoareAssignment :: Char -> Aexp -> Bexp -> HoareTriple
 hoareAssignment v e q =
   HoareTriple
-  (boptimize (substAssignment (boptimize q) (aoptimize e) v))
+  (boptimize (substBexp (boptimize q) (aoptimize e) v))
   (CAssign v e)
   (boptimize q)
 
-substAexp :: Aexp -> Char -> Aexp -> Aexp
-substAexp (AId x) v e      = if x == v then e else (AId x)
-substAexp (APlus x y) v e  = APlus (substAexp x v e) (substAexp y v e)
-substAexp (AMinus x y) v e = AMinus (substAexp x v e) (substAexp y v e)
-substAexp (AMult x y) v e  = AMult (substAexp x v e) (substAexp y v e)
-substAexp x e v            = x--if x == v then (AId e) else x
+substAexp :: Aexp -> Aexp -> Char -> Aexp
+substAexp (AId x) e v      = if x == v then e else (AId x)
+substAexp (APlus x y) e v  = APlus (substAexp x e v) (substAexp y e v)
+substAexp (AMinus x y) e v = AMinus (substAexp x e v) (substAexp y e v)
+substAexp (AMult x y) e v  = AMult (substAexp x e v) (substAexp y e v)
+substAexp x e v            = x
 
 -- Q[E/V] is the result of replacing in Q all occurrences of V by E
-substAssignment :: Bexp -> Aexp -> Char -> Bexp
-substAssignment q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
+substBexp :: Bexp -> Aexp -> Char -> Bexp
+substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | x == x2 && x2 == v && y1 > 0 = BNot (BEq (AId x) (ANum 0))
   | otherwise                    = q
-substAssignment q@(BEq x y) e v = BEq (substAexp x v e) (substAexp y v e)
-substAssignment q@(BLe x y) e v = BLe (substAexp x v e) (substAexp y v e)
-substAssignment (BAnd b1 b2) e v      = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
-substAssignment (BNot b) e v          = BNot (substAssignment b e v)
-substAssignment q _ _ = q
+substBexp q@(BEq x y) e v  = BEq (substAexp x e v) (substAexp y e v)
+substBexp q@(BLe x y) e v  = BLe (substAexp x e v) (substAexp y e v)
+substBexp (BAnd b1 b2) e v = BAnd (substBexp b1 e v) (substBexp b2 e v)
+substBexp (BNot b) e v     = BNot (substBexp b e v)
+substBexp q _ _ = q
 
 -- | Hoare sequence rule
 hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple

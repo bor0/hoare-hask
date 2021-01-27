@@ -568,12 +568,12 @@ Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurren
 hoareAssignment :: Char -> Aexp -> Bexp -> HoareTriple
 hoareAssignment v e q =
   HoareTriple
-  (boptimize (substAssignment (boptimize q) (aoptimize e) v))
+  (boptimize (substBexp (boptimize q) (aoptimize e) v))
   (CAssign v e)
   (boptimize q)
 \end{lstlisting}
 
-There are several ways how the function \texttt{substAssignment} can be implemented. We list a few:
+There are several ways how the function \texttt{substBexp} can be implemented. We list a few:
 
 \begin{itemize}
 \item One way is to do a full \texttt{Aexp}/\texttt{Bexp} evaluation; we can do this, since these languages are strongly normalizing, compared to our imperative language. However, this evaluation can still take some time, and it requires a context in addition.
@@ -583,19 +583,19 @@ There are several ways how the function \texttt{substAssignment} can be implemen
 In this paper, the substitution will contain a concrete set of mathematical rewrites, though the reader is encouraged to try different implementations and spot the advantages and disadvantages of each.
 
 \begin{lstlisting}
-substAexp :: Aexp -> Char -> Aexp -> Aexp
-substAexp (AId x) v e = if x == v then e else (AId x)
-substAexp (APlus x y) v e = APlus (substAexp x v e) (substAexp y v e)
-substAexp (AMinus x y) v e = AMinus (substAexp x v e) (substAexp y v e)
-substAexp (AMult x y) v e = AMult (substAexp x v e) (substAexp y v e)
+substAexp :: Aexp -> Aexp -> Char -> Aexp
+substAexp (AId x) e v = if x == v then e else (AId x)
+substAexp (APlus x y) e v = APlus (substAexp x e v) (substAexp y e v)
+substAexp (AMinus x y) e v = AMinus (substAexp x e v) (substAexp y e v)
+substAexp (AMult x y) e v = AMult (substAexp x e v) (substAexp y e v)
 substAexp x _ _ = x
 
-substAssignment :: Bexp -> Aexp -> Char -> Bexp
-substAssignment q@(BEq x y) e v = BEq (substAexp x v e) (substAexp y v e)
-substAssignment q@(BLe x y) e v = BLe (substAexp x v e) (substAexp y v e)
-substAssignment (BAnd b1 b2) e v = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
-substAssignment (BNot b) e v = BNot (substAssignment b e v)
-substAssignment q _ _ = q
+substBexp :: Bexp -> Aexp -> Char -> Bexp
+substBexp q@(BEq x y) e v = BEq (substAexp x e v) (substAexp y e v)
+substBexp q@(BLe x y) e v = BLe (substAexp x e v) (substAexp y e v)
+substBexp (BAnd b1 b2) e v = BAnd (substBexp b1 e v) (substBexp b2 e v)
+substBexp (BNot b) e v = BNot (substBexp b e v)
+substBexp q _ _ = q
 \end{lstlisting}
 
 In this case, the implementation will rewrite a variable with an arithmetical expression within a boolean expression. Given this definition, some proofs can be deduced, such as:
@@ -609,7 +609,7 @@ Given the precondition \texttt{TRUE} (\texttt{3 = 3} before optimization), the c
 
 \subsubsection{H-Sequence}
 
-For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent). We avoid full evaluation and rely on \texttt{boptimize}.
+For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent).
 
 \begin{lstlisting}
 hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
@@ -662,7 +662,7 @@ To construct a Hoare triple for this command using \texttt{hoareConditional}, we
 To be able to construct these proofs, we need to add another substitution rule:
 
 \begin{lstlisting}
-substAssignment q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
+substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | x == x2 && x2 == v && y1 > 0 = BNot (BEq (AId x) (ANum 0))
   | otherwise = q
 \end{lstlisting}
@@ -698,6 +698,7 @@ Even though our implementation and its substitution and optimization rules are s
 That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B} using some set of commands - the function to swap the values between two variables.
 
 \section{Conclusion}
+
 Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but e.g. the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without going through all evaluations. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept.
 
 The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategy for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software.
