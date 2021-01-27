@@ -583,28 +583,29 @@ There are several ways how the function \texttt{substAssignment} can be implemen
 In this paper, the substitution will contain a concrete set of mathematical rewrites, though the reader is encouraged to try different implementations and spot the advantages and disadvantages of each.
 
 \begin{lstlisting}
+substAexp :: Aexp -> Char -> Aexp -> Aexp
+substAexp (AId x) v e = if x == v then e else (AId x)
+substAexp (APlus x y) v e = APlus (substAexp x v e) (substAexp y v e)
+substAexp (AMinus x y) v e = AMinus (substAexp x v e) (substAexp y v e)
+substAexp (AMult x y) v e = AMult (substAexp x v e) (substAexp y v e)
+substAexp x _ _ = x
+
 substAssignment :: Bexp -> Aexp -> Char -> Bexp
-substAssignment q@(BEq (AId x) y) e v
-  | x == v = BEq e y
-  | y == e = BEq (AId x) (AId v)
-  | otherwise = q
-substAssignment q@(BEq x (AId y)) e v
-  | x == e = BEq (AId v) (AId y)
-  | y == v = BEq x e
-  | otherwise = q
+substAssignment q@(BEq x y) e v = BEq (substAexp x v e) (substAexp y v e)
+substAssignment q@(BLe x y) e v = BLe (substAexp x v e) (substAexp y v e)
 substAssignment (BAnd b1 b2) e v = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
 substAssignment (BNot b) e v = BNot (substAssignment b e v)
 substAssignment q _ _ = q
 \end{lstlisting}
 
-In this case, the implementation will do a rewrite when either the expression on the left or the expression on the right represents a variable. Given this definition, some proofs can be deduced, such as:
+In this case, the implementation will rewrite a variable with an arithmetical expression within a boolean expression. Given this definition, some proofs can be deduced, such as:
 
 \begin{lstlisting}
 > hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
 {TRUE} X := 3; {X == 3}
 \end{lstlisting}
 
-That is, given the precondition that \texttt{TRUE} (which is \texttt{3 = 3} before optimization), the assignment \texttt{X := 3} implies the postcondition \texttt{X = 3}.
+Given the precondition \texttt{TRUE} (\texttt{3 = 3} before optimization), the command \texttt{X := 3} implies the postcondition \texttt{X = 3}.
 
 \subsubsection{H-Sequence}
 
@@ -676,12 +677,25 @@ With these additions, we can construct the two proofs as follows:
 
 \begin{lstlisting}
 > let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
-{X == 0 && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
 > let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
-{! (X == 0) && 0 == 0} ; {! (X == 0) && 0 == 0}
 > hoareConditional eg1 eg2
 Right {TRUE} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
 \end{lstlisting}
+
+\subsection{Example: Swap}
+
+Even though our implementation and its substitution and optimization rules are simple enough, it can still prove some very useful facts. Consider the following proofs:
+
+\begin{lstlisting}
+> hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
+{(a + b - b) == A && b == B} a := a + b; {(a - b) == A && b == B}
+> hoareAssignment 'b' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AMinus (AId 'a') (AId 'b')) (AId 'B')))
+{(a - b) == A && (a - (a - b)) == B} b := (a - b); {b == A && (a - b) == B}
+> hoareAssignment 'a' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AId 'a') (AId 'B')))
+{b == A && (a - b) == B} a := (a - b); {b == A && a == B}
+\end{lstlisting}
+
+That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B} using some set of commands - the function to swap the values between two variables.
 
 \section{Conclusion}
 Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but e.g. the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without going through all evaluations. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept.

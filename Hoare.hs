@@ -22,21 +22,22 @@ hoareAssignment v e q =
   (CAssign v e)
   (boptimize q)
 
+substAexp :: Aexp -> Char -> Aexp -> Aexp
+substAexp (AId x) v e      = if x == v then e else (AId x)
+substAexp (APlus x y) v e  = APlus (substAexp x v e) (substAexp y v e)
+substAexp (AMinus x y) v e = AMinus (substAexp x v e) (substAexp y v e)
+substAexp (AMult x y) v e  = AMult (substAexp x v e) (substAexp y v e)
+substAexp x e v            = x--if x == v then (AId e) else x
+
 -- Q[E/V] is the result of replacing in Q all occurrences of V by E
 substAssignment :: Bexp -> Aexp -> Char -> Bexp
 substAssignment q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | x == x2 && x2 == v && y1 > 0 = BNot (BEq (AId x) (ANum 0))
   | otherwise                    = q
-substAssignment q@(BEq (AId x) y) e v
-  | x == v    = BEq e y
-  | y == e    = BEq (AId x) (AId v)
-  | otherwise = q
-substAssignment q@(BEq x (AId y)) e v
-  | x == e    = BEq (AId v) (AId y)
-  | y == v    = BEq x e
-  | otherwise = q
-substAssignment (BAnd b1 b2) e v = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
-substAssignment (BNot b) e v     = BNot (substAssignment b e v)
+substAssignment q@(BEq x y) e v = BEq (substAexp x v e) (substAexp y v e)
+substAssignment q@(BLe x y) e v = BLe (substAexp x v e) (substAexp y v e)
+substAssignment (BAnd b1 b2) e v      = BAnd (substAssignment b1 e v) (substAssignment b2 e v)
+substAssignment (BNot b) e v          = BNot (substAssignment b e v)
 substAssignment q _ _ = q
 
 -- | Hoare sequence rule
