@@ -23,7 +23,7 @@ hoareAssignment v e q =
   (boptimize q)
 
 substAexp :: Aexp -> Aexp -> Char -> Aexp
-substAexp (AId x) e v      = if x == v then e else (AId x)
+substAexp (AId x) e v      = if x == v then e else AId x
 substAexp (APlus x y) e v  = APlus (substAexp x e v) (substAexp y e v)
 substAexp (AMinus x y) e v = AMinus (substAexp x e v) (substAexp y e v)
 substAexp (AMult x y) e v  = AMult (substAexp x e v) (substAexp y e v)
@@ -34,8 +34,8 @@ substBexp :: Bexp -> Aexp -> Char -> Bexp
 substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | x == x2 && x2 == v && y1 > 0 = BNot (BEq (AId x) (ANum 0))
   | otherwise                    = q
-substBexp q@(BEq x y) e v  = BEq (substAexp x e v) (substAexp y e v)
-substBexp q@(BLe x y) e v  = BLe (substAexp x e v) (substAexp y e v)
+substBexp q@(BEq x y) e v  = BEq (aoptimize $ substAexp x e v) (aoptimize $ substAexp y e v)
+substBexp q@(BLe x y) e v  = BLe (aoptimize $ substAexp x e v) (aoptimize $ substAexp y e v)
 substBexp (BAnd b1 b2) e v = BAnd (substBexp b1 e v) (substBexp b2 e v)
 substBexp (BNot b) e v     = BNot (substBexp b e v)
 substBexp q _ _ = q

@@ -330,7 +330,6 @@ For example, the single-step optimization values can be used as following:
 \begin{lstlisting}
 > let expr = BNot BTrue in "Optimize: " ++ show expr ++ " = " ++ show (boptimize expr)
 Optimize: ! (TRUE) = FALSE
-
 > let expr = APlus (ANum 2) (ANum 5) in "Optimize: " ++ show expr ++ " = " ++ show (aoptimize expr)
 Optimize: 2 + 5 = 7
 \end{lstlisting}
@@ -340,10 +339,8 @@ However, since the single-step evaluation strategy does not rely on any context,
 \begin{lstlisting}
 > let expr = APlus (AId 'X') (ANum 5) in "Optimize: " ++ show expr ++ " = " ++ show (aoptimize expr)
 Optimize: X + 5 = X + 5
-
 > let expr = APlus (AId 'X') (ANum 5) in show expr ++ " = " ++ show (aeval (M.fromList [('X', 5)]) expr)
 X + 5 = 10
-
 > let expr = BEq (AId 'X') (ANum 5) in show expr ++ " = " ++ show (beval (M.fromList [('X', 5)]) expr)
 X == 5 = True
 \end{lstlisting}
@@ -476,13 +473,10 @@ That is, this program will calculate \texttt{Y := X!}. Here's an implementation 
 |       l5 = CAssign 'Z' (AMinus (AId 'Z') (ANum 1))
 |   in CSequence l1 (CSequence l2 l3)
 | :}
-
 > eval (M.fromList [('X', 5)]) fact_X
 Right (fromList [('X',5),('Y',120),('Z',0)])
-
 > let expr = CAssert (BEq (ANum 5) (AId 'X')) factX (BEq (ANum 120) (AId 'Y')) in "Assert {X=5} factX {Y=120}: " ++ show (eval (M.fromList [('X', 5)]) expr)
 Assert {X=5} factX {Y=120}: Right (fromList [('X',5),('Y',120),('Z',0)])
-
 > let expr = CAssert (BEq (ANum 4) (AId 'X')) factX (BEq (ANum 120) (AId 'Y')) in "Assert {X=4} factX {Y=120}: " ++ show (eval (M.fromList [('X', 5)]) expr)
 Assert {X=4} factX {Y=120}: Left "Pre-condition does not match!"
 \end{lstlisting}
@@ -493,7 +487,7 @@ In the previous chapter, we implemented assertions (\texttt{CAssert}) at the run
 
 Some programming languages, like Python, don't have a compile step and the \texttt{eval} function we provided is kind of equivalent to evaluating programs in Python. But some programming languages do have a compile step, like C or Haskell, and this compilation step can be beneficial in that it can do additional different checks, e.g., type checks. That's what we'll do here - implement a "compile"-time check (just another evaluation strategy) using some of the rules in Hoare's logic, and this check can be used to check the validity of a program, before fully evaluating it.
 
-We list the rules of Hoare logic, some of them outlined in the original paper\cite{b7}. However, we will only provide an implementation for some of them.
+We list the rules of Hoare logic, some of which are outlined in the original paper\cite{b7}. In this paper, we only provide an implementation for some of them.
 
 \[
 \AxiomC{}
@@ -513,15 +507,15 @@ We list the rules of Hoare logic, some of them outlined in the original paper\ci
 \]
 \hfill
 \[
-\AxiomC{$\{B \land P\}S\{P\}$}
-\RightLabel{(H-While)}
-\UnaryInfC{$\{P\}\texttt{while }B\texttt{ do }S\{\neg B \land P\}$}
-\DisplayProof
-\quad
-\quad
 \AxiomC{$\{B \land P\}S\{Q\} , \{\neg B \land P\}T\{Q\}$}
 \RightLabel{(H-Conditional)}
 \UnaryInfC{$\{P\}\texttt{if }B\texttt{ then }S\texttt{ else } T\{Q\}$}
+\DisplayProof
+\quad
+\quad
+\AxiomC{$\{B \land P\}S\{P\}$}
+\RightLabel{(H-While)}
+\UnaryInfC{$\{P\}\texttt{while }B\texttt{ do }S\{\neg B \land P\}$}
 \DisplayProof
 \]
 \hfill
@@ -551,14 +545,12 @@ hoareSkip :: Bexp -> HoareTriple
 hoareSkip q = HoareTriple (boptimize q) CSkip (boptimize q)
 \end{lstlisting}
 
-With an example usage:
+We rely on the optimizing functions to further simplify calculations. Note that the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
 
 \begin{lstlisting}
 > hoareSkip (BEq (ANum 3) (ANum 3))
 {TRUE} ; {TRUE}
 \end{lstlisting}
-
-We rely on the optimizing functions to further simplify calculations. Note that the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
 
 \subsubsection{H-Assign}
 
@@ -584,15 +576,15 @@ In this paper, the substitution will contain a concrete set of mathematical rewr
 
 \begin{lstlisting}
 substAexp :: Aexp -> Aexp -> Char -> Aexp
-substAexp (AId x) e v = if x == v then e else (AId x)
+substAexp (AId x) e v = if x == v then e else AId x
 substAexp (APlus x y) e v = APlus (substAexp x e v) (substAexp y e v)
 substAexp (AMinus x y) e v = AMinus (substAexp x e v) (substAexp y e v)
 substAexp (AMult x y) e v = AMult (substAexp x e v) (substAexp y e v)
 substAexp x _ _ = x
 
 substBexp :: Bexp -> Aexp -> Char -> Bexp
-substBexp q@(BEq x y) e v = BEq (substAexp x e v) (substAexp y e v)
-substBexp q@(BLe x y) e v = BLe (substAexp x e v) (substAexp y e v)
+substBexp q@(BEq x y) e v = BEq (aoptimize $ substAexp x e v) (aoptimize $ substAexp y e v)
+substBexp q@(BLe x y) e v = BLe (aoptimize $ substAexp x e v) (aoptimize $ substAexp y e v)
 substBexp (BAnd b1 b2) e v = BAnd (substBexp b1 e v) (substBexp b2 e v)
 substBexp (BNot b) e v = BNot (substBexp b e v)
 substBexp q _ _ = q
@@ -659,7 +651,7 @@ To construct a Hoare triple for this command using \texttt{hoareConditional}, we
 \item $\{X \neq 0 \land P\}T\{Q\}$
 \end{itemize}
 
-To be able to construct these proofs, we need to add another substitution rule:
+To be able to construct these proofs, we will add another substitution rule:
 
 \begin{lstlisting}
 substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
@@ -667,7 +659,7 @@ substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | otherwise = q
 \end{lstlisting}
 
-This substitution rule states that whenever $x$ is zero, increasing it by a non-zero value will produce the postcondition that it is not zero. In addition, we need to expand \texttt{boptimize} with the following definition, so that it handles double negation properly:
+This substitution rule states that whenever $x$ is zero, increasing it by a non-zero value will produce the postcondition that $x$ is no longer zero. We also expand \texttt{boptimize} to handle double negation properly:
 
 \begin{lstlisting}
 boptimize (BAnd (BNot (BNot b1)) b2) = BAnd b1 b2
@@ -682,9 +674,9 @@ With these additions, we can construct the two proofs as follows:
 Right {TRUE} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
 \end{lstlisting}
 
-\subsection{Example: Swap}
+\subsection{Example proof: Swap}
 
-Even though our implementation and its substitution and optimization rules are simple enough, it can still prove some very useful facts. Consider the following proofs:
+Even though our implementation is simple enough, it can still prove some very useful facts. Consider the following:
 
 \begin{lstlisting}
 > hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
@@ -696,6 +688,20 @@ Even though our implementation and its substitution and optimization rules are s
 \end{lstlisting}
 
 That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B}. We proved that this set of commands will swap the values between two variables.
+
+To make it more obvious, we can add two additional optimization rules that state $a + b - b = a$ and $a - (a - b) = b$:
+
+\begin{lstlisting}
+aoptimize q@(AMinus (APlus (AId a1) (AId a2)) (AId a3))  = if a2 == a3 then AId a1 else q
+aoptimize q@(AMinus (AId a1) (AMinus (AId a2) (AId a3))) = if a1 == a2 then AId a3 else q
+\end{lstlisting}
+
+The proof can be completed with \texttt{hoareSequence} as follows:
+
+\begin{lstlisting}
+> whenRight (hoareSequence swap1 swap2) (\x -> hoareSequence x swap3)
+Right {a == A && b == B} a := a + b; b := (a - b); a := (a - b); {b == A && a == B}
+\end{lstlisting}
 
 \section{Conclusion}
 

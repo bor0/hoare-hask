@@ -8,6 +8,8 @@ import Utils
 import Hoare
 import qualified Data.Map as M
 
+import Data.List (intercalate)
+
 -- Calculate factorial of X
 factX =
   -- Z := X
@@ -55,3 +57,8 @@ main = do
   let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   putStrLn $ "Hoare conditional example: " ++ show (hoareConditional eg1 eg2)
+  -- Hoare swap proof
+  let swap1 = hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
+  let swap2 = hoareAssignment 'b' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AMinus (AId 'a') (AId 'b')) (AId 'B')))
+  let swap3 = hoareAssignment 'a' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AId 'a') (AId 'B')))
+  putStrLn $ intercalate "\n" ["Hoare swap proof:", show swap1, show swap2, show swap3, "-->", show $ whenRight (hoareSequence swap1 swap2) (\x -> hoareSequence x swap3)]
