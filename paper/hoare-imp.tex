@@ -149,48 +149,48 @@ Similarly to \texttt{aoptimize}, we list the evaluation rules for optimizing a b
 
 \[
 \AxiomC{$a_1 = a_2$}
-\RightLabel{(B-Eq-Num-True)}
+\RightLabel{(B-Opt-EqNumTrue)}
 \UnaryInfC{$\texttt{BEq} \ \$a_1 \ \$a_2 \hookrightarrow \texttt{BTrue}$}
 \DisplayProof
 \quad
 \AxiomC{$a_1 \neq a_2$}
-\RightLabel{(B-Eq-Num-False)}
+\RightLabel{(B-Opt-EqNumFalse)}
 \UnaryInfC{$\texttt{BEq} \ \$a_1 \ \$a_2 \hookrightarrow \texttt{BFalse}$}
 \DisplayProof
 \]
 \hfill
 \[
 \AxiomC{$v_1 = v_2$}
-\RightLabel{(B-Eq-Id-True)}
+\RightLabel{(B-Opt-EqIdTrue)}
 \UnaryInfC{$\texttt{BEq} \ \#v_1 \ \#v_2 \hookrightarrow \texttt{BTrue}$}
 \DisplayProof
 \quad
 \AxiomC{$v_1 \neq v_2$}
-\RightLabel{(B-Eq-Id-False)}
+\RightLabel{(B-Opt-EqIdFalse)}
 \UnaryInfC{$\texttt{BEq} \ \#v_1 \ \#v_2 \hookrightarrow \texttt{BEq} \ \#v_1 \ \#v_2$}
 \DisplayProof
 \]
 \hfill
 \[
 \AxiomC{}
-\RightLabel{(B-Neg-True)}
+\RightLabel{(B-Opt-NegTrue)}
 \UnaryInfC{$ \texttt{BNot} \ \texttt{BTrue} \hookrightarrow \texttt{BFalse}$}
 \DisplayProof
 \quad
 \AxiomC{}
-\RightLabel{(B-Neg-False)}
+\RightLabel{(B-Opt-NegFalse)}
 \UnaryInfC{$ \texttt{BNot} \ \texttt{BFalse} \hookrightarrow \texttt{BTrue}$}
 \DisplayProof
 \]
 \hfill
 \[
 \AxiomC{}
-\RightLabel{(B-And-False)}
+\RightLabel{(B-Opt-AndFalse)}
 \UnaryInfC{$ \texttt{BAnd BFalse} \ x \hookrightarrow \texttt{BFalse} $}
 \DisplayProof
 \quad
 \AxiomC{}
-\RightLabel{(B-And-True)}
+\RightLabel{(B-Opt-AndTrue)}
 \UnaryInfC{$ \texttt{BAnd BTrue} \ x \hookrightarrow x $}
 \DisplayProof
 \]
