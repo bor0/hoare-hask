@@ -87,7 +87,7 @@ data Aexp =
   | AMult Aexp Aexp
 \end{lstlisting}
 
-We show the evaluation rules for optimizing an expression. In this context, "optimization" is just another evaluation strategy.
+We show the evaluation rules for optimizing an expression. Here, "optimization" is just another evaluation strategy.
 
 \[
 \AxiomC{}
@@ -363,7 +363,7 @@ That is, the language contains the minimum set of commands which make an imperat
 \item \texttt{CSequence} will join two commands, which allows for the evaluation of commands in sequence.
 \item \texttt{CIfElse} accepts a boolean and depending on its value either executes one command, or another.
 \item \texttt{CWhile} accepts a boolean and keeps executing a command as long as the boolean is true.
-\item \texttt{CAssert} accepts a precondition, a command, and a postcondition. The evaluation will be successful if the precondition is satisfied before executing the command, and the postcondition is satisfied after executing the command.
+\item \texttt{CAssert} accepts a precondition, a command, and a postcondition. The evaluation will be successful if the precondition and the postcondition are satisfied before and after executing the command, respectively.
 \end{itemize}
 
 We show the evaluation rules for this language:
@@ -668,7 +668,7 @@ Right {TRUE} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
 
 \subsection{Example proof: Swap}
 
-Even though the implementation is simple enough, it can still be used to prove some useful facts:
+Even though the implementation we provide is simple enough, it can still be used to prove some useful facts:
 
 \begin{lstlisting}
 > hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
@@ -679,9 +679,7 @@ Even though the implementation is simple enough, it can still be used to prove s
 {b == A && (a - b) == B} a := (a - b); {b == A && a == B}
 \end{lstlisting}
 
-That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B}. We proved that this set of commands will swap the values between two variables.
-
-To make it more obvious, we can add two additional optimization rules that state $a + b - b = a$ and $a - (a - b) = b$:
+That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B}. We proved that this set of commands will swap the values between two variables. To make this proof more obvious, we can add two additional optimization rules that state $a + b - b = a$ and $a - (a - b) = b$:
 
 \begin{lstlisting}
 aoptimize q@(AMinus (APlus (AId a1) (AId a2)) (AId a3))  = if a2 == a3 then AId a1 else q
@@ -697,11 +695,7 @@ Right {a == A && b == B} a := a + b; b := (a - b); a := (a - b); {b == A && a ==
 
 \section{Conclusion}
 
-Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but e.g. the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without going through all evaluations. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept.
-
-The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategy for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software.
-
-Even though the mathematical formulas for Hoare logic look simple, implementing them is a completely different matter. The implementation details cover stuff like "what expressions do we want to support", "are we working with a strongly normalizing language", "what's the language that will represent propositions", etc. while these details are hidden in the mathematical representation of these formulas.
+Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept. The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategies for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software. Even though the mathematical formulas for Hoare logic look simple, implementing them is a different matter. The implementation details cover stuff like "what expressions do we want to support", "are we working with a strongly normalizing language", "what's the language that will represent propositions", etc. while these details are hidden in the mathematical representation of these formulas.
 
 \section{Conflict of interest}
 
