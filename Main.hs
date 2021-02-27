@@ -53,10 +53,13 @@ main = do
   putStrLn $ "Hoare assignment example: " ++ show hoareAssignmentEg
   -- Hoare sequence example
   putStrLn $ "Hoare sequence example: " ++ show (hoareSequence hoareAssignmentEg hoareSkipEg)
+  -- Hoare consequence example
+  putStrLn $ "Hoare consequence example: " ++ show (hoareConsequence BTrue hoareAssignmentEg (BEq (AId 'X') (ANum 3)))
   -- Hoare conditional example
   let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
-  putStrLn $ "Hoare conditional example: " ++ show (hoareConditional eg1 eg2)
+  let eg1' = hoareConsequence (BAnd (BEq (AId 'X') (ANum 0)) (BEq (ANum 0) (ANum 0))) eg1 (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+  putStrLn $ "Hoare conditional example: " ++ show (whenRight eg1' (\eg1 -> hoareConditional eg1 eg2))
   -- Hoare swap proof
   let swap1 = hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
   let swap2 = hoareAssignment 'b' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AMinus (AId 'a') (AId 'b')) (AId 'B')))

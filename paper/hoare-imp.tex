@@ -499,6 +499,13 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 \]
 \hfill
 \[
+\AxiomC{$P_1 \to P_2 , \{P_2\}S\{Q_2\} , Q_2 \to Q_1$}
+\RightLabel{(H-Consequence)}
+\UnaryInfC{$\{P_1\} S \{Q_1\}$}
+\DisplayProof
+\]
+\hfill
+\[
 \AxiomC{$\{B \land P\}S\{Q\} , \{\neg B \land P\}T\{Q\}$}
 \RightLabel{(H-Conditional)}
 \UnaryInfC{$\{P\}\texttt{if }B\texttt{ then }S\texttt{ else } T\{Q\}$}
@@ -508,13 +515,6 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 \AxiomC{$\{B \land P\}S\{P\}$}
 \RightLabel{(H-While)}
 \UnaryInfC{$\{P\}\texttt{while }B\texttt{ do }S\{\neg B \land P\}$}
-\DisplayProof
-\]
-\hfill
-\[
-\AxiomC{$P_1 \to P_2 , \{P_2\}S\{Q_2\} , Q_2 \to Q_1$}
-\RightLabel{(H-Consequence)}
-\UnaryInfC{$\{P_1\} S \{Q_1\}$}
 \DisplayProof
 \]
 
@@ -534,14 +534,14 @@ The Haskell implementation of the Hoare skip rule can be represented as follows:
 
 \begin{lstlisting}
 hoareSkip :: Bexp -> HoareTriple
-hoareSkip q = HoareTriple (boptimize q) CSkip (boptimize q)
+hoareSkip q = HoareTriple q CSkip q
 \end{lstlisting}
 
-We rely on the optimizing functions to further simplify calculations. Note that the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
+Note that the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
 
 \begin{lstlisting}
 > hoareSkip (BEq (ANum 3) (ANum 3))
-{TRUE} ; {TRUE}
+{3 == 3} ; {3 == 3}
 \end{lstlisting}
 
 \subsubsection{H-Assign}
@@ -552,9 +552,9 @@ Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurren
 hoareAssignment :: Char -> Aexp -> Bexp -> HoareTriple
 hoareAssignment v e q =
   HoareTriple
-  (boptimize (substBexp (boptimize q) (aoptimize e) v))
+  (substBexp q (aoptimize e) v)
   (CAssign v e)
-  (boptimize q)
+  q
 \end{lstlisting}
 
 There are several ways how the function \texttt{substBexp} can be implemented. We list a few:
@@ -586,10 +586,10 @@ This implementation will rewrite a variable with an arithmetical expression with
 
 \begin{lstlisting}
 > hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
-{TRUE} X := 3; {X == 3}
+{3 == 3} X := 3; {X == 3}
 \end{lstlisting}
 
-Given the precondition \texttt{TRUE} (\texttt{3 = 3} before optimization), the command \texttt{X := 3} implies the postcondition \texttt{X = 3}.
+Given the precondition \texttt{3 = 3}, the command \texttt{X := 3} implies the postcondition \texttt{X = 3}.
 
 \subsubsection{H-Sequence}
 
@@ -598,7 +598,7 @@ For the Hoare sequence rule, given two Hoare triples, the postcondition of the f
 \begin{lstlisting}
 hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
 hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
-  | boptimize q1 == boptimize q2 = Right $ HoareTriple (boptimize p) (CSequence c1 c2) (boptimize r)
+  | boptimize q1 == boptimize q2 = Right $ HoareTriple p (CSequence c1 c2) r
   | otherwise = Left "Cannot construct proof"
 \end{lstlisting}
 
@@ -611,6 +611,31 @@ As with \texttt{eval}, the \texttt{Either} data type is used to distinguish betw
 Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
 \end{lstlisting}
 
+\subsubsection{H-Consequence}
+
+The consequence rule can be used to strengthen a pre-condition and/or weaken a post-condition in a Hoare triple.
+
+Ideally, the implication in the consequence rule would represent the evaluation of a higher-order logic, but we're limiting it to optimization (our own small logic) for simplicity. That is, we use $\hookrightarrow$ in place of $\to$ in the rule.
+
+In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (in this case, the optimization result) into a Hoare triple.
+
+\begin{lstlisting}
+hoareConsequence :: Bexp -> HoareTriple -> Bexp -> Either String HoareTriple
+hoareConsequence p1 (HoareTriple p2 c q2) q1
+  | p1 == boptimize p2 &&
+    q2 == boptimize q1 = Right $ HoareTriple p1 c q1
+  | otherwise = Left "Cannot construct proof"
+\end{lstlisting}
+
+For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its pre-condition as follows:
+
+\begin{lstlisting}
+> hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
+{3 == 3} X := 3; {X == 3}
+> hoareConsequence BTrue (hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))) (BEq (AId 'X') (ANum 3))
+Right {TRUE} X := 3; {X == 3}
+\end{lstlisting}
+
 \subsubsection{H-Conditional}
 
 For the Hoare conditional rule, similarly to the Hoare sequence rule, we rely on \texttt{boptimize} for checking whether the corresponding values match.
@@ -620,11 +645,11 @@ hoareConditional :: HoareTriple -> HoareTriple -> Either String HoareTriple
 hoareConditional (HoareTriple (BAnd b1 p1) c1 q1) (HoareTriple (BAnd (BNot b2) p2) c2 q2)
   | boptimize b1 == boptimize b2 &&
     boptimize p1 == boptimize p2 &&
-    boptimize q1 == boptimize q2 = Right $ HoareTriple (boptimize p1) (CIfElse b1 c1 c2) (boptimize q1)
+    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional (HoareTriple (BAnd p1 b1) c1 q1) (HoareTriple (BAnd (BNot p2) b2) c2 q2)
   | boptimize b1 == boptimize b2 &&
     boptimize p1 == boptimize p2 &&
-    boptimize q1 == boptimize q2 = Right $ HoareTriple (boptimize p1) (CIfElse b1 c1 c2) (boptimize q1)
+    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
   | otherwise = Left "Cannot construct proof"
 hoareConditional _ _ = Left "Cannot construct proof"
 \end{lstlisting}
@@ -661,9 +686,23 @@ With these additions, we can construct the two proofs as follows:
 
 \begin{lstlisting}
 > let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+{! (! (X == 0)) && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
 > let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
-> hoareConditional eg1 eg2
-Right {TRUE} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
+{! (X == 0) && 0 == 0} ; {! (X == 0) && 0 == 0}
+\end{lstlisting}
+
+In order to match the form of the conditional rule, we will apply the consequence rule:
+
+\begin{lstlisting}
+> let eg1' = hoareConsequence (BAnd (BEq (AId 'X') (ANum 0)) (BEq (ANum 0) (ANum 0))) eg1 (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+Right {X == 0 && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
+\end{lstlisting}
+
+At this point, we can apply the conditional rule:
+
+\begin{lstlisting}
+> whenRight eg1' (\eg1 -> hoareConditional eg1 eg2)
+Right {0 == 0} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
 \end{lstlisting}
 
 \subsection{Example proof: Swap}
