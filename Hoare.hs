@@ -44,7 +44,7 @@ substBexp q _ _ = q
 -- | Hoare consequence rule
 hoareConsequence :: Bexp -> HoareTriple -> Bexp -> Either String HoareTriple
 hoareConsequence p1 (HoareTriple p2 c q2) q1
-  | p1 == boptimize p2 &&
+  | boptimize p1 == p2 &&
     q2 == boptimize q1 = Right $ HoareTriple p1 c q1
   | otherwise          = Left "Cannot construct proof"
 

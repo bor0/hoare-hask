@@ -602,7 +602,7 @@ In other words, the rule provides a way to transform a Hoare triple by embedding
 \begin{lstlisting}
 hoareConsequence :: Bexp -> HoareTriple -> Bexp -> Either String HoareTriple
 hoareConsequence p1 (HoareTriple p2 c q2) q1
-  | p1 == boptimize p2 &&
+  | boptimize p1 == p2 &&
     q2 == boptimize q1 = Right $ HoareTriple p1 c q1
   | otherwise = Left "Cannot construct proof"
 \end{lstlisting}
@@ -612,8 +612,8 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 \begin{lstlisting}
 > hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
 {3 == 3} X := 3; {X == 3}
-> hoareConsequence BTrue (hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))) (BEq (AId 'X') (ANum 3))
-Right {TRUE} X := 3; {X == 3}
+> hoareConsequence (BAnd BTrue (BEq (ANum 3) (ANum 3))) (hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))) (BEq (AId 'X') (ANum 3))
+Right {TRUE && 3 == 3} X := 3; {X == 3}
 \end{lstlisting}
 
 \subsubsection{H-Sequence}
@@ -659,15 +659,15 @@ hoareConditional _ _ = Left "Cannot construct proof"
 For the purposes of example, we start by considering the command:
 
 \begin{lstlisting}
-> CIfElse (BEq (AId 'X') (ANum 0)) (CAssign 'X' (APlus (AId 'X') (ANum 1))) CSkip
-(If (X == 0) Then (X := X + 1;) Else (;));
+> CIfElse (BNot (BEq (AId 'X') (ANum 0))) CSkip (CAssign 'X' (APlus (AId 'X') (ANum 1)))
+(If (! (X == 0)) Then (;) Else (X := X + 1;));
 \end{lstlisting}
 
 To construct a Hoare triple for this command using \texttt{hoareConditional}, we have to construct two proofs:
 
 \begin{itemize}
-\item $\{X = 0 \land P\} X := X + 1\{Q\}$
-\item $\{X \neq 0 \land P\}T\{Q\}$
+\item $\{X \neq 0 \land P\} \ ; \{Q\}$
+\item $\{\neg(X \neq 0) \land P\} X := X + 1; \{Q\}$
 \end{itemize}
 
 To be able to construct these proofs, we will add another substitution rule:
@@ -687,24 +687,17 @@ boptimize (BAnd (BNot (BNot b1)) b2) = BAnd b1 b2
 With these additions, we can construct the two proofs as follows:
 
 \begin{lstlisting}
-> let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
-{! (! (X == 0)) && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
-> let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+> let eg1 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
 {! (X == 0) && 0 == 0} ; {! (X == 0) && 0 == 0}
-\end{lstlisting}
-
-In order to match the form of the conditional rule, we will apply the consequence rule:
-
-\begin{lstlisting}
-> let eg1' = hoareConsequence (BAnd (BEq (AId 'X') (ANum 0)) (BEq (ANum 0) (ANum 0))) eg1 (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
-Right {X == 0 && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
+> let eg2 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
+{! (! (X == 0)) && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
 \end{lstlisting}
 
 At this point, we can apply the conditional rule:
 
 \begin{lstlisting}
-> whenRight eg1' (\eg1 -> hoareConditional eg1 eg2)
-Right {0 == 0} (If (X == 0) Then (X := X + 1;) Else (;)); {! (X == 0) && 0 == 0}
+> hoareConditional eg1 eg21
+Right {0 == 0} (If (! (X == 0)) Then (;) Else (X := X + 1;)); {! (X == 0) && 0 == 0}
 \end{lstlisting}
 
 \subsection{Example proof: Swap}
