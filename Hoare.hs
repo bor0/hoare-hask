@@ -22,6 +22,7 @@ hoareAssignment v e q =
   (CAssign v e)
   q
 
+-- Q[E/V] is the result of replacing in Q all occurrences of V by E
 substAexp :: Aexp -> Aexp -> Char -> Aexp
 substAexp (AId x) e v      = if x == v then e else AId x
 substAexp (APlus x y) e v  = APlus (substAexp x e v) (substAexp y e v)
@@ -29,7 +30,7 @@ substAexp (AMinus x y) e v = AMinus (substAexp x e v) (substAexp y e v)
 substAexp (AMult x y) e v  = AMult (substAexp x e v) (substAexp y e v)
 substAexp x e v            = x
 
--- Q[E/V] is the result of replacing in Q all occurrences of V by E
+-- Auxiliary replacement function for Bexps
 substBexp :: Bexp -> Aexp -> Char -> Bexp
 substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | x == x2 && x2 == v && y1 > 0 = BNot (BEq (AId x) (ANum 0))
