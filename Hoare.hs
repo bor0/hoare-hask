@@ -40,12 +40,6 @@ substBexp (BAnd b1 b2) e v = BAnd (substBexp b1 e v) (substBexp b2 e v)
 substBexp (BNot b) e v     = BNot (substBexp b e v)
 substBexp q _ _ = q
 
--- | Hoare sequence rule
-hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
-hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
-  | boptimize q1 == boptimize q2 = Right $ HoareTriple p (CSequence c1 c2) r
-  | otherwise                    = Left "Cannot construct proof"
-
 -- | Hoare consequence rule
 hoareConsequence :: Bexp -> HoareTriple -> Bexp -> Either String HoareTriple
 hoareConsequence p1 (HoareTriple p2 c q2) q1
@@ -53,15 +47,21 @@ hoareConsequence p1 (HoareTriple p2 c q2) q1
     q2 == boptimize q1 = Right $ HoareTriple p1 c q1
   | otherwise          = Left "Cannot construct proof"
 
+-- | Hoare sequence rule
+hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
+hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
+  | q1 == q2  = Right $ HoareTriple p (CSequence c1 c2) r
+  | otherwise = Left "Cannot construct proof"
+
 -- | Hoare conditional rule
 hoareConditional :: HoareTriple -> HoareTriple -> Either String HoareTriple
 hoareConditional (HoareTriple (BAnd b1 p1) c1 q1) (HoareTriple (BAnd (BNot b2) p2) c2 q2)
-  | boptimize b1 == boptimize b2 &&
-    boptimize p1 == boptimize p2 &&
-    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | b1 == b2 &&
+    p1 == p2 &&
+    q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional (HoareTriple (BAnd p1 b1) c1 q1) (HoareTriple (BAnd (BNot p2) b2) c2 q2)
-  | boptimize b1 == boptimize b2 &&
-    boptimize p1 == boptimize p2 &&
-    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
-  | otherwise                    = Left "Cannot construct proof"
+  | b1 == b2 &&
+    p1 == p2 &&
+    q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | otherwise = Left "Cannot construct proof"
 hoareConditional _ _ = Left "Cannot construct proof"

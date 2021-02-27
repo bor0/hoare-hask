@@ -51,10 +51,10 @@ main = do
   -- Hoare assignment example
   let hoareAssignmentEg = hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
   putStrLn $ "Hoare assignment example: " ++ show hoareAssignmentEg
-  -- Hoare sequence example
-  putStrLn $ "Hoare sequence example: " ++ show (hoareSequence hoareAssignmentEg hoareSkipEg)
   -- Hoare consequence example
   putStrLn $ "Hoare consequence example: " ++ show (hoareConsequence BTrue hoareAssignmentEg (BEq (AId 'X') (ANum 3)))
+  -- Hoare sequence example
+  putStrLn $ "Hoare sequence example: " ++ show (hoareSequence hoareAssignmentEg hoareSkipEg)
   -- Hoare conditional example
   let eg1 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   let eg2 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))

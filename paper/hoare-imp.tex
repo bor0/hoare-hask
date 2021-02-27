@@ -491,17 +491,17 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 \RightLabel{(H-Assign)}
 \UnaryInfC{$\{P[E/x]\}x:=E\{P\}$}
 \DisplayProof
-\quad
-\AxiomC{$\{P\}S\{Q\} , \{Q\}T\{R\}$}
-\RightLabel{(H-Sequence)}
-\UnaryInfC{$\{P\}S;T\{R\}$}
-\DisplayProof
 \]
 \hfill
 \[
 \AxiomC{$P_1 \to P_2 , \{P_2\}S\{Q_2\} , Q_2 \to Q_1$}
 \RightLabel{(H-Consequence)}
 \UnaryInfC{$\{P_1\} S \{Q_1\}$}
+\DisplayProof
+\quad
+\AxiomC{$\{P\}S\{Q\} , \{Q\}T\{R\}$}
+\RightLabel{(H-Sequence)}
+\UnaryInfC{$\{P\}S;T\{R\}$}
 \DisplayProof
 \]
 \hfill
@@ -591,33 +591,13 @@ This implementation will rewrite a variable with an arithmetical expression with
 
 Given the precondition \texttt{3 = 3}, the command \texttt{X := 3} implies the postcondition \texttt{X = 3}.
 
-\subsubsection{H-Sequence}
-
-For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent).
-
-\begin{lstlisting}
-hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
-hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
-  | boptimize q1 == boptimize q2 = Right $ HoareTriple p (CSequence c1 c2) r
-  | otherwise = Left "Cannot construct proof"
-\end{lstlisting}
-
-As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms. Several commands can be chained as follows:
-
-\begin{lstlisting}
-> let c1 = hoareAssignment 'Y' (ANum 1) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
-> let c2 = hoareAssignment 'Z' (AId 'X') (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'Z') (AId 'X')))
-> hoareSequence c1 c2
-Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
-\end{lstlisting}
-
 \subsubsection{H-Consequence}
 
 The consequence rule can be used to strengthen a precondition and/or weaken a postcondition in a Hoare triple.
 
 Ideally, the implication in the consequence rule would represent the evaluation of a higher-order logic, but we're limiting it to optimization (our own small logic) for simplicity. That is, we use $\hookrightarrow$ in place of $\to$ in the rule.
 
-In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (in this case, the optimization result) into a Hoare triple.
+In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (in this case specifically, the optimization result of \texttt{boptimize}) into a Hoare triple.
 
 \begin{lstlisting}
 hoareConsequence :: Bexp -> HoareTriple -> Bexp -> Either String HoareTriple
@@ -636,20 +616,42 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 Right {TRUE} X := 3; {X == 3}
 \end{lstlisting}
 
+\subsubsection{H-Sequence}
+
+For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent).
+
+\begin{lstlisting}
+hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
+hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
+  | q1 == q2 = Right $ HoareTriple p (CSequence c1 c2) r
+  | otherwise = Left "Cannot construct proof"
+\end{lstlisting}
+
+As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms. Several commands can be chained as follows:
+
+\begin{lstlisting}
+> let c1 = hoareAssignment 'Y' (ANum 1) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
+{1 == 1 && X == X} Y := 1; {Y == 1 && X == X}
+> let c2 = hoareAssignment 'Z' (AId 'X') (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'Z') (AId 'X')))
+{Y == 1 && X == X} Z := X; {Y == 1 && Z == X}
+> hoareSequence c1 c2
+Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
+\end{lstlisting}
+
 \subsubsection{H-Conditional}
 
-For the Hoare conditional rule, similarly to the Hoare sequence rule, we rely on \texttt{boptimize} for checking whether the corresponding values match.
+Next, we provide an implementation for the Hoare conditional rule, covering both cases for commutativity of logical and.
 
 \begin{lstlisting}
 hoareConditional :: HoareTriple -> HoareTriple -> Either String HoareTriple
 hoareConditional (HoareTriple (BAnd b1 p1) c1 q1) (HoareTriple (BAnd (BNot b2) p2) c2 q2)
-  | boptimize b1 == boptimize b2 &&
-    boptimize p1 == boptimize p2 &&
-    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | b1 == b2 &&
+    p1 == p2 &&
+    q1 == q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional (HoareTriple (BAnd p1 b1) c1 q1) (HoareTriple (BAnd (BNot p2) b2) c2 q2)
-  | boptimize b1 == boptimize b2 &&
-    boptimize p1 == boptimize p2 &&
-    boptimize q1 == boptimize q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | b1 == b2 &&
+    p1 == p2 &&
+    q1 == q2 = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
   | otherwise = Left "Cannot construct proof"
 hoareConditional _ _ = Left "Cannot construct proof"
 \end{lstlisting}
