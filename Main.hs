@@ -59,6 +59,10 @@ main = do
   let eg1 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   let eg2 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   putStrLn $ "Hoare conditional example: " ++ show (hoareConditional eg1 eg2)
+  -- Hoare while example
+  let eg1 = hoareSkip (BEq (ANum 0) (ANum 0))
+  let eg2 = hoareConsequence (BAnd BTrue (BEq (ANum 0) (ANum 0))) eg1 (BEq (ANum 0) (ANum 0))
+  putStrLn $ "Hoare while example: " ++ show (whenRight eg2 (\eg -> hoareWhile eg))
   -- Hoare swap proof
   let swap1 = hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
   let swap2 = hoareAssignment 'b' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AMinus (AId 'a') (AId 'b')) (AId 'B')))

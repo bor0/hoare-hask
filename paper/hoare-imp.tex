@@ -479,7 +479,7 @@ In the previous chapter, we implemented assertions (\texttt{CAssert}) at the run
 
 Some programming languages, like Python, don't have a compile step and the \texttt{eval} function we provided is kind of equivalent to evaluating programs in Python. But some programming languages do have a compile step, like C or Haskell, and this compilation step can be beneficial in that it can do additional different checks, e.g., type checks. That's what we'll do here - implement a "compile"-time check (just another evaluation strategy) using some of the rules in Hoare's logic, and this check can be used to check the validity of a program, before fully evaluating it.
 
-We list the rules of Hoare logic, some of which are outlined in the original paper\cite{b7}. In this paper, we only provide an implementation for some of them.
+We list the rules of Hoare logic, some of which are outlined in the original paper\cite{b7}.
 
 \[
 \AxiomC{}
@@ -602,8 +602,8 @@ In other words, the rule provides a way to transform a Hoare triple by embedding
 \begin{lstlisting}
 hoareConsequence :: Bexp -> HoareTriple -> Bexp -> Either String HoareTriple
 hoareConsequence p1 (HoareTriple p2 c q2) q1
-  | boptimize p1 == p2 &&
-    q2 == boptimize q1 = Right $ HoareTriple p1 c q1
+  | boptimize p1 == p2 && q1 == q2 = Right $ HoareTriple p1 c q1
+  | q2 == boptimize q1 && p1 == p2 = Right $ HoareTriple p1 c q1
 hoareConsequence _ _ _ = Left "Cannot construct proof"
 \end{lstlisting}
 
@@ -662,7 +662,7 @@ For the purposes of example, we start by considering the command:
 (If (! (X == 0)) Then (;) Else (X := X + 1;));
 \end{lstlisting}
 
-To construct a Hoare triple for this command using \texttt{hoareConditional}, we have to construct two proofs:
+The conditionals $B$ and $P$ are given in the code. Now, following the rule to construct a Hoare triple for this command, we have to construct two proofs:
 
 \begin{itemize}
 \item $\{X \neq 0 \land P\} \ ; \{Q\}$
@@ -698,6 +698,46 @@ At this point, we can apply the conditional rule:
 > hoareConditional eg1 eg21
 Right {0 == 0} (If (! (X == 0)) Then (;) Else (X := X + 1;)); {! (X == 0) && 0 == 0}
 \end{lstlisting}
+
+\subsubsection{H-While}
+
+In this part, we provide the implementation of the last and most important and complex rule.
+
+\begin{lstlisting}
+hoareWhile :: HoareTriple -> Either String HoareTriple
+hoareWhile (HoareTriple (BAnd b p1) c p2)
+  | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (BAnd (BNot b) p1)
+hoareWhile (HoareTriple (BAnd p1 b) c p2)
+  | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (BAnd (BNot b) p1)
+hoareWhile _ = Left "Cannot construct proof"
+\end{lstlisting}
+
+The implementation for constructing the rule is straight-forward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
+
+Similarly as we did with the \texttt{H-Conditional} rule, for the purposes of example, we will consider the command:
+
+\begin{lstlisting}
+> CWhile BTrue CSkip
+(While (TRUE) Do {;});
+\end{lstlisting}
+
+In this case, we get that $B$ is \texttt{BTrue} and $S$ is \texttt{CSkip}. Thus, we must provide the Hoare triple $\{\top \land P \} \ ; \{P\}$. We can use \texttt{hoareSkip} together with \texttt{hoareConsequence} to construct such triple as follows:
+
+\begin{lstlisting}
+> let c = hoareSkip (BEq (ANum 0) (ANum 0))
+{0 == 0} ; {0 == 0}
+> hoareConsequence (BAnd BTrue (BEq (ANum 0) (ANum 0))) c (BEq (ANum 0) (ANum 0))
+Right {TRUE && 0 == 0} ; {0 == 0}
+\end{lstlisting}
+
+Now we can deduce the following:
+
+\begin{lstlisting}
+> whenRight (hoareConsequence (BAnd BTrue (BEq (ANum 0) (ANum 0))) c (BEq (ANum 0) (ANum 0))) (\x -> hoareWhile x)
+Right {0 == 0} (While (TRUE) Do {;}); {! (TRUE) && 0 == 0}
+\end{lstlisting}
+
+That is, from an infinite loop ($\bottom$), follows anything (false).
 
 \subsection{Example proof: Swap}
 
