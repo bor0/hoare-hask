@@ -640,7 +640,7 @@ Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
 
 \subsubsection{H-Conditional}
 
-Next, we provide an implementation for the Hoare conditional rule, covering both cases for commutativity of logical and.
+We provide an implementation for the Hoare conditional rule, covering both cases for commutativity of logical and.
 
 \begin{lstlisting}
 hoareConditional :: HoareTriple -> HoareTriple -> Either String HoareTriple
@@ -737,7 +737,7 @@ Now we can deduce the following:
 Right {0 == 0} (While (TRUE) Do {;}); {! (TRUE) && 0 == 0}
 \end{lstlisting}
 
-That is, from an infinite loop ($\bottom$), follows anything (false).
+That is, from an infinite loop ($\bot$), follows anything (false).
 
 \subsection{Example proof: Swap}
 
