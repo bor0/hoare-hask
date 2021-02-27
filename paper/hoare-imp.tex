@@ -57,7 +57,7 @@ The programming language that we will implement already has an implementation in
 
 Haskell is not a strongly normalizing language, which means that not every evaluation necessarily terminates. However, in dependently-typed languages, such as Coq\cite{b4}, the evaluation of proof terms (e.g. the type checker) is strongly normalizing, and this is what allows us to express mathematical proofs.
 
-There are good introductory books on dependent types\cite{b3}. In some books, there is a gentler approach which might be handy for newcomers\cite{b5}. There are good introductions to Haskell as well\cite{b6}.
+There are good introductory books on dependent types\cite{b3}. In some books, there is a gentler approach that might be handy for newcomers\cite{b5}. There are good introductions to Haskell as well\cite{b6}.
 
 \section{Numbers language}
 
@@ -520,7 +520,7 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 
 \subsection{Implementation}
 
-We represent the Hoare triple as a product of a command, a precondition (\texttt{Bexp}) and a postcondition (\texttt{Bexp}). In this case, the design decision is that pre/postconditions will be in the language of \texttt{Bexp}, but they can also be in a different language (regardless of that \texttt{Bexp} is used in \texttt{Command}).
+We represent the Hoare triple as a product of a command, a precondition (\texttt{Bexp}), and a postcondition (\texttt{Bexp}). In this case, the design decision is that pre/postconditions will be in the language of \texttt{Bexp}, but they can also be in a different language (regardless of that \texttt{Bexp} is used in \texttt{Command}).
 
 \begin{lstlisting}
 data HoareTriple = HoareTriple Bexp Command Bexp
@@ -613,7 +613,7 @@ Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
 
 \subsubsection{H-Consequence}
 
-The consequence rule can be used to strengthen a pre-condition and/or weaken a post-condition in a Hoare triple.
+The consequence rule can be used to strengthen a precondition and/or weaken a postcondition in a Hoare triple.
 
 Ideally, the implication in the consequence rule would represent the evaluation of a higher-order logic, but we're limiting it to optimization (our own small logic) for simplicity. That is, we use $\hookrightarrow$ in place of $\to$ in the rule.
 
@@ -627,7 +627,7 @@ hoareConsequence p1 (HoareTriple p2 c q2) q1
   | otherwise = Left "Cannot construct proof"
 \end{lstlisting}
 
-For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its pre-condition as follows:
+For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its precondition as follows:
 
 \begin{lstlisting}
 > hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
@@ -734,7 +734,11 @@ Right {a == A && b == B} a := a + b; b := (a - b); a := (a - b); {b == A && a ==
 
 \section{Conclusion}
 
-Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept. The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategies for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software. Even though the mathematical formulas for Hoare logic look simple, implementing them is a different matter. The implementation details cover stuff like "what expressions do we want to support", "are we working with a strongly normalizing language", "what's the language that will represent propositions", etc. while these details are hidden in the mathematical representation of these formulas.
+Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept.
+
+The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategies for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software.
+
+Even though the mathematical formulas for Hoare logic look simple, implementing them is a different matter. The implementation details cover stuff like "what expressions do we want to support", "are we working with a strongly normalizing language", "what's the language that will represent propositions", etc. while these details are hidden in the mathematical representation of these formulas.
 
 \section{Conflict of interest}
 
