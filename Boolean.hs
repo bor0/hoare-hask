@@ -26,5 +26,4 @@ boptimize (BNot BTrue)               = BFalse
 boptimize (BNot BFalse)              = BTrue
 boptimize (BAnd BFalse _)            = BFalse
 boptimize (BAnd BTrue b2)            = b2
-boptimize (BAnd (BNot (BNot b1)) b2) = BAnd b1 b2
 boptimize x                          = x

@@ -607,6 +607,8 @@ hoareConsequence p1 (HoareTriple p2 c q2) q1
 hoareConsequence _ _ _ = Left "Cannot construct proof"
 \end{lstlisting}
 
+As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms.
+
 For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its precondition as follows:
 
 \begin{lstlisting}
@@ -618,7 +620,7 @@ Right {TRUE && 3 == 3} X := 3; {X == 3}
 
 \subsubsection{H-Sequence}
 
-For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple (for some definition of equivalent).
+For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple, for some definition of equivalent; in this specific case, we rely on Haskell's \texttt{Eq}.
 
 \begin{lstlisting}
 hoareSequence :: HoareTriple -> HoareTriple -> Either String HoareTriple
@@ -627,7 +629,7 @@ hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
 hoareSequence _ _ = Left "Cannot construct proof"
 \end{lstlisting}
 
-As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms. Several commands can be chained as follows:
+Several commands can be chained as follows:
 
 \begin{lstlisting}
 > let c1 = hoareAssignment 'Y' (ANum 1) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
@@ -677,25 +679,14 @@ substBexp q@(BEq (AId x) (ANum 0)) (APlus (AId x2) (ANum y1)) v
   | otherwise = q
 \end{lstlisting}
 
-This substitution rule states that whenever $x$ is zero, increasing it by a non-zero value will produce the postcondition that $x$ is no longer zero. We also expand \texttt{boptimize} to handle double negation properly:
-
-\begin{lstlisting}
-boptimize (BAnd (BNot (BNot b1)) b2) = BAnd b1 b2
-\end{lstlisting}
-
-With these additions, we can construct the two proofs as follows:
+This substitution rule states that whenever $x$ is zero, increasing it by a non-zero value will produce the postcondition that $x$ is no longer zero. With this, we can construct the proof as follows:
 
 \begin{lstlisting}
 > let eg1 = hoareSkip (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
 {! (X == 0) && 0 == 0} ; {! (X == 0) && 0 == 0}
 > let eg2 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
 {! (! (X == 0)) && 0 == 0} X := X + 1; {! (X == 0) && 0 == 0}
-\end{lstlisting}
-
-At this point, we can apply the conditional rule:
-
-\begin{lstlisting}
-> hoareConditional eg1 eg21
+> hoareConditional eg1 eg2
 Right {0 == 0} (If (! (X == 0)) Then (;) Else (X := X + 1;)); {! (X == 0) && 0 == 0}
 \end{lstlisting}
 
@@ -768,7 +759,7 @@ Right {a == A && b == B} a := a + b; b := (a - b); a := (a - b); {b == A && a ==
 
 \section{Conclusion}
 
-Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by implementing a subset of Hoare logic as a proof of concept.
+Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by providing a simple implementation of Hoare logic as a proof of concept.
 
 The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategies for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software.
 
