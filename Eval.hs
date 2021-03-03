@@ -20,6 +20,7 @@ beval ctx BTrue        = True
 beval ctx BFalse       = False
 beval ctx (BEq a1 a2)  = aeval ctx a1 == aeval ctx a2
 beval ctx (BLe a1 a2)  = aeval ctx a1 <= aeval ctx a2
+beval ctx (BLt a1 a2)  = aeval ctx a1 < aeval ctx a2
 beval ctx (BNot b1)    = not (beval ctx b1)
 beval ctx (BAnd b1 b2) = beval ctx b1 && beval ctx b2
 

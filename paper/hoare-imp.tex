@@ -141,6 +141,7 @@ data Bexp =
   | BFalse
   | BEq Aexp Aexp
   | BLe Aexp Aexp
+  | BLt Aexp Aexp
   | BNot Bexp
   | BAnd Bexp Bexp
 \end{lstlisting}
@@ -289,6 +290,11 @@ Finally, the evaluation rules for boolean expressions:
 \RightLabel{(B-Eval-Le)}
 \UnaryInfC{$\texttt{BLe} \ a_1 \ a_2 \underset{ctx}{\Rightarrow} a_1' \le a_2'$}
 \DisplayProof
+\quad
+\AxiomC{$a_1 \underset{ctx}{\to} a_1' , a_2 \underset{ctx}{\to} a_2'$}
+\RightLabel{(B-Eval-Lt)}
+\UnaryInfC{$\texttt{BLt} \ a_1 \ a_2 \underset{ctx}{\Rightarrow} a_1' < a_2'$}
+\DisplayProof
 \]
 \hfill
 \[
@@ -313,6 +319,7 @@ beval ctx BTrue = True
 beval ctx BFalse = False
 beval ctx (BEq a1 a2) = aeval ctx a1 == aeval ctx a2
 beval ctx (BLe a1 a2) = aeval ctx a1 <= aeval ctx a2
+beval ctx (BLt a1 a2) = aeval ctx a1 < aeval ctx a2
 beval ctx (BNot b1) = not (beval ctx b1)
 beval ctx (BAnd b1 b2) = beval ctx b1 && beval ctx b2
 \end{lstlisting}
@@ -703,7 +710,7 @@ hoareWhile (HoareTriple (BAnd p1 b) c p2)
 hoareWhile _ = Left "Cannot construct proof"
 \end{lstlisting}
 
-The implementation for constructing the rule is straight-forward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
+The implementation for constructing the rule is straightforward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
 
 Similarly as we did with the \texttt{H-Conditional} rule, for the purposes of example, we will consider the command:
 
@@ -730,9 +737,13 @@ Right {0 == 0} (While (TRUE) Do {;}); {! (TRUE) && 0 == 0}
 
 That is, from an infinite loop ($\bot$), follows anything (false).
 
-\subsection{Example proof: Swap}
+\subsection{Example proofs}
 
-Even though the implementation we provide is simple enough, it can still be used to prove some useful facts:
+So far we only looked at artificial examples, neatly crafted to match the specific forms that the rules accept. Even though the implementation we provided is simple enough, it can still be used to prove some useful real-world facts.
+
+\subsubsection{Assignment (Swap)}
+
+We will show a simple example of the assignment rule.
 
 \begin{lstlisting}
 > hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
@@ -757,13 +768,66 @@ The proof can be completed with \texttt{hoareSequence} as follows:
 Right {a == A && b == B} a := a + b; b := (a - b); a := (a - b); {b == A && a == B}
 \end{lstlisting}
 
-\section{Conclusion}
+\subsubsection{While (Counting)}
+
+We provide the implementation of a program that increases \texttt{X} up to 10:
+
+\begin{lstlisting}
+> :{
+| countTo10 =
+|   let l1 = CAssign 'X' $ ANum 0
+|       l2 = CWhile (BLt (AId 'X') (ANum 10)) l3
+|       l3 = CAssign 'X' (APlus (AId 'X') (ANum 1))
+|   in CSequence l1 l2
+> eval M.empty countTo10
+Right (fromList [('X',10)])
+\end{lstlisting}
+
+Looking at the while rule, we can determine the values of \texttt{B} and \texttt{S} based on the command:
+
+\[
+\AxiomC{$\{x < 10 \land P\}\texttt{ x := x + 1 }\{P\}$}
+\UnaryInfC{$\{P\}\texttt{while } x < 10\texttt{ do x := x + 1 }\{\neg (x < 10) \land P\}$}
+\DisplayProof
+\]
+
+A sensible value for \texttt{P} would be $x \le 10$, because it holds wherever \texttt{P} is referenced.
+
+\[
+\AxiomC{$\{x < 10 \land x \le 10\}\texttt{ x := x + 1 }\{x \le 10 \}$}
+\UnaryInfC{$\{x \le 10\}\texttt{while } x < 10\texttt{ do x := x + 1 }\{\neg (x < 10) \land x \le 10 \}$}
+\DisplayProof
+\]
+
+Note that $\neg (x < 10) \land x \le 10$ simplifies to $x = 10$.
+
+We should not use \texttt{HoareTriple} directly, but it can still be useful to show us what we need to prove:
+
+\begin{lstlisting}
+> let ht = HoareTriple (BAnd (BLt (AId 'X') (ANum 10)) (BLe (AId 'X') (ANum 10))) (CAssign 'X' (APlus (AId 'X') (ANum 1))) (BLe (AId 'X') (ANum 10))
+{X < 10 && X <= 10} X := X + 1; {X <= 10}
+> hoareWhile ht
+Right {X <= 10} (While (X < 10) Do {X := X + 1;}); {! (X < 10) && X <= 10}
+\end{lstlisting}
+
+If we are able to produce \texttt{ht} using the rules, we'll be able to prove our statement. Using \texttt{hoareAssignment}, we can produce the following:
+
+\begin{lstlisting}
+> let ht = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BLe (AId 'X') (ANum 10))
+{X + 1 <= 10} X := X + 1; {X <= 10}
+\end{lstlisting}
+
+If we tweak our optimization and substitution rules, we will be able to show that we can get from \texttt{X + 1 <= 10} to \texttt{X <= 9}, and then to \texttt{X < 10}, using the \texttt{H-Consequence} rule.
+
+\section{Conclusion and future work}
 
 Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by providing a simple implementation of Hoare logic as a proof of concept.
 
 The evaluation strategies of a programming language directly affect how a programmer thinks. For example, if a programming language has a type system, the programmer will take advantage of it, subconsciously being aware of the (different) evaluation strategies for the type checker, in addition to the regular evaluation strategy for programs. If a programming language has the feature to verify properties about programs, such as Hoare logic, the programmer will be aware of this different evaluation strategy and use it to write more correct software.
 
 Even though the mathematical formulas for Hoare logic look simple, implementing them is a different matter. The implementation details cover stuff like "what expressions do we want to support", "are we working with a strongly normalizing language", "what's the language that will represent propositions", etc. while these details are hidden in the mathematical representation of these formulas.
+
+The biggest disadvantage of the provided implementation is that we had to manually add optimization rules, which is a bit tedious. Ideally, we should rely on a theorem prover that only contains a minimal set of axioms, and uses those to derive e.g. $x + 1 \le 10 \to x < 10$. Another disadvantage is that the implementation of \texttt{H-Consequence} is very simple, not really supporting logical implication as such. Finally, our system does not support quantifiers. Nevertheless, this paper serves as a good way to show the complexity and difficulty of designing such systems.
 
 \section{Conflict of interest}
 

@@ -10,17 +10,27 @@ import qualified Data.Map as M
 
 import Data.List (intercalate)
 
+-- Count X up to 10
+countTo10 =
+  -- X := 0
+  let l1 = CAssign 'X' $ ANum 0
+  -- while ~(X = Y)
+      l2 = CWhile (BLt (AId 'X') (ANum 10)) l3
+      -- X := X + 1
+      l3 = CAssign 'X' (APlus (AId 'X') (ANum 1))
+  in CSequence l1 l2
+
 -- Calculate factorial of X
 factX =
   -- Z := X
   let l1 = CAssign 'Z' $ AId 'X'
   -- Y := 1
       l2 = CAssign 'Y' (ANum 1)
-  -- while (~Z = 0)
+  -- while ~(Z = 0)
       l3 = CWhile (BNot (BEq (AId 'Z') (ANum 0))) (CSequence l4 l5)
-     -- Y := Y * Z
+      -- Y := Y * Z
       l4 = CAssign 'Y' (AMult (AId 'Y') (AId 'Z'))
-     -- Z := Z - 1
+      -- Z := Z - 1
       l5 = CAssign 'Z' (AMinus (AId 'Z') (ANum 1))
   in CSequence l1 (CSequence l2 l3)
 
@@ -60,9 +70,8 @@ main = do
   let eg2 = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BAnd (BNot (BEq (AId 'X') (ANum 0))) (BEq (ANum 0) (ANum 0)))
   putStrLn $ "Hoare conditional example: " ++ show (hoareConditional eg1 eg2)
   -- Hoare while example
-  let eg1 = hoareSkip (BEq (ANum 0) (ANum 0))
-  let eg2 = hoareConsequence (BAnd BTrue (BEq (ANum 0) (ANum 0))) eg1 (BEq (ANum 0) (ANum 0))
-  putStrLn $ "Hoare while example: " ++ show (whenRight eg2 (\eg -> hoareWhile eg))
+  let eg1 = HoareTriple (BAnd (BLt (AId 'X') (ANum 10)) (BLe (AId 'X') (ANum 10))) (CAssign 'X' (APlus (AId 'X') (ANum 1))) (BLe (AId 'X') (ANum 10))
+  putStrLn $ "Hoare while example: " ++ show (hoareWhile eg1)
   -- Hoare swap proof
   let swap1 = hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
   let swap2 = hoareAssignment 'b' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AMinus (AId 'a') (AId 'b')) (AId 'B')))

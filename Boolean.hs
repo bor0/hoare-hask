@@ -7,6 +7,7 @@ data Bexp =
   | BFalse
   | BEq Aexp Aexp
   | BLe Aexp Aexp
+  | BLt Aexp Aexp
   | BNot Bexp
   | BAnd Bexp Bexp
   deriving (Eq)
@@ -16,6 +17,7 @@ instance Show Bexp where
   show BFalse     = "FALSE"
   show (BEq x y)  = show x ++ " == " ++ show y
   show (BLe x y)  = show x ++ " <= " ++ show y
+  show (BLt x y)  = show x ++ " < " ++ show y
   show (BNot x)   = "! (" ++ show x ++ ")"
   show (BAnd x y) = show x ++ " && " ++ show y
 
