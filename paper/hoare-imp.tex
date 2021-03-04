@@ -671,7 +671,7 @@ For the purposes of example, we start by considering the command:
 (If (! (X == 0)) Then (;) Else (X := X + 1;));
 \end{lstlisting}
 
-The conditionals $B$ and $P$ are given in the code. Now, following the rule to construct a Hoare triple for this command, we have to construct two proofs:
+The conditionals \texttt{B} and \texttt{P} are given in the code. Now, following the rule to construct a Hoare triple for this command, we have to construct two proofs:
 
 \begin{itemize}
 \item $\{X \neq 0 \land P\} \ ; \{Q\}$
@@ -719,7 +719,7 @@ Similarly as we did with the \texttt{H-Conditional} rule, for the purposes of ex
 (While (TRUE) Do {;});
 \end{lstlisting}
 
-In this case, we get that $B$ is \texttt{BTrue} and $S$ is \texttt{CSkip}. Thus, we must provide the Hoare triple $\{\top \land P \} \ ; \{P\}$. We can use \texttt{hoareSkip} together with \texttt{hoareConsequence} to construct such triple as follows:
+In this case, we get that \texttt{B} is \texttt{BTrue} and \texttt{S} is \texttt{CSkip}. Thus, we must provide the Hoare triple $\{\top \land P \} \ ; \{P\}$. We can use \texttt{hoareSkip} together with \texttt{hoareConsequence} to construct such triple as follows:
 
 \begin{lstlisting}
 > let c = hoareSkip (BEq (ANum 0) (ANum 0))
@@ -791,7 +791,7 @@ Looking at the while rule, we can determine the values of \texttt{B} and \texttt
 \DisplayProof
 \]
 
-A sensible value for \texttt{P} would be $x \le 10$, because it holds wherever \texttt{P} is referenced.
+A sensible value for \texttt{P} would be $x \le 10$, because it holds wherever \texttt{P} is referenced in the formula.
 
 \[
 \AxiomC{$\{x < 10 \land x \le 10\}\texttt{ x := x + 1 }\{x \le 10 \}$}
@@ -827,7 +827,7 @@ The evaluation strategies of a programming language directly affect how a progra
 
 Even though the mathematical formulas for Hoare logic look simple, implementing them is a different matter. The implementation details cover stuff like "what expressions do we want to support", "are we working with a strongly normalizing language", "what's the language that will represent propositions", etc. while these details are hidden in the mathematical representation of these formulas.
 
-The biggest disadvantage of the provided implementation is that we had to manually add optimization rules, which is a bit tedious. Ideally, we should rely on a theorem prover that only contains a minimal set of axioms, and uses those to derive e.g. $x + 1 \le 10 \to x < 10$. Another disadvantage is that the implementation of \texttt{H-Consequence} is very simple, not really supporting logical implication as such. Finally, our system does not support quantifiers. Nevertheless, this paper serves as a good way to show the complexity and difficulty of designing such systems.
+The biggest disadvantage of the provided implementation is that we had to manually add optimization rules, which is a bit tedious. Ideally, we would rely on a theorem prover that only contains a minimal set of axioms, and uses those to derive e.g. $x + 1 \le 10 \to x < 10$. Another disadvantage is that the implementation of \texttt{H-Consequence} is very simple, not really supporting logical implication as such. Finally, our system does not support quantifiers. Nevertheless, this paper serves as a good way to show the complexity and difficulty of designing such systems.
 
 \section{Conflict of interest}
 
