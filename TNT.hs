@@ -57,6 +57,18 @@ applyArithRule (GoRight:xs) f (Mult x y)  = Mult x (applyArithRule xs f y)
 applyArithRule _ _ Z = Z -- nothing to apply for 0
 applyArithRule _ _ (Var x) = Var x -- nothing to apply for a variable
 
+-- Combines applyFOLRule and applyArithRule
+applyFOLArithRule :: Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
+applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Proof $ go pos (fromProof x)) x
+  where
+  go GoLeft (PropVar (Eq x y)) = PropVar (Eq (applyArithRule path2 f x) y)
+  go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))
+  go _ x = x
+
+-- Get terms, given specific paths
+getTerms :: [(Pos, Path, Path)] -> Proof (PropCalc (FOL a)) -> [Proof (PropCalc (FOL a))]
+getTerms ((pos, path1, path2):paths) x = applyFOLArithRule pos path1 path2 id x : getTerms paths x
+
 -- Substitution function for arithmetical formulas
 substArith :: Eq a => Arith a -> Arith a -> Arith a -> Arith a
 substArith (S q) v e = S (substArith q v e)
@@ -148,7 +160,7 @@ ruleSpec (Proof f) v e = Proof $ go f v e
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
 ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a))
-ruleGeneralize (Proof f) v Nothing| v `notElem` getBoundVars f
+ruleGeneralize (Proof f) v Nothing | v `notElem` getBoundVars f
   = Proof $ PropVar (ForAll v f)
 ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `notElem` getFreeVars (fromProof premise) -- fantasy vars
   = Proof $ PropVar (ForAll v f)
@@ -168,16 +180,13 @@ ruleInterchangeR x = x
 
 -- | Rule of Existence
 -- Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable which otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> (Path, Path, Pos) -> Proof (PropCalc (FOL a))
-ruleExistence (Proof f) v (path1, path2, pos) | v `notElem` getBoundVars f =
-  Proof $ PropVar (Exists v (fromProof applied))
+ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
+ruleExistence f v paths | allSame (getTerms paths f) = Proof $ PropVar (Exists v (fromProof (go f paths)))
   where
-  applied = applyFOLRule path1 (go pos v path2) (Proof f)
-  replace path x var = applyArithRule path (\_ -> Var var) (Var var)
-  go :: Pos -> a -> Path -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-  go GoRight v path (Proof (PropVar (Eq a b))) = Proof $ PropVar (Eq a (replace path b v))
-  go GoLeft v path (Proof (PropVar (Eq a b)))  = Proof $ PropVar (Eq (replace path a v) b)
-  go _ _ _ x = x
+  go f ((pos, path1, path2):paths) =
+    let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
+    in go newProof paths
+  go x _ = x
 
 -- | Rule of Symmetry
 -- If r=s is a theorem, then so is s=r

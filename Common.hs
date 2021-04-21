@@ -8,6 +8,9 @@ whenLeft :: Either t b -> (t -> Either a b) -> Either a b
 whenLeft (Left x) f   = f x
 whenLeft (Right x)  _ = Right x
 
+allSame :: Eq a => [a] -> Bool
+allSame xs = all (== head xs) (tail xs)
+
 data Pos = GoLeft | GoRight deriving (Eq)
 
 type Path = [Pos]
