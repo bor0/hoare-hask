@@ -13,11 +13,13 @@ aeval ctx (Plus a1 a2)   = aeval ctx a1 + aeval ctx a2
 aeval ctx (Mult a1 a2)   = aeval ctx a1 * aeval ctx a2
 
 beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Bool
-beval ctx (PropVar (Eq x y)) = aeval ctx x == aeval ctx y
-beval ctx (Not b1)    = not (beval ctx b1)
-beval ctx (And b1 b2) = beval ctx b1 && beval ctx b2
-beval ctx (Or b1 b2) = beval ctx b1 || beval ctx b2
-beval ctx (Imp b1 b2) = not (beval ctx b1) || beval ctx b2
+beval ctx (PropVar (Eq x y))     = aeval ctx x == aeval ctx y
+beval ctx (PropVar (ForAll x y)) = beval ctx y
+beval ctx (PropVar (Exists x y)) = beval ctx y
+beval ctx (Not b1)               = not (beval ctx b1)
+beval ctx (And b1 b2)            = beval ctx b1 && beval ctx b2
+beval ctx (Or b1 b2)             = beval ctx b1 || beval ctx b2
+beval ctx (Imp b1 b2)            = not (beval ctx b1) || beval ctx b2
 
 eval :: (Ord a, Eq a) => Context a -> Command a -> Either String (Context a)
 eval ctx CSkip             = Right ctx
