@@ -7,7 +7,7 @@ module TNT
   , axiom3
   , axiom4
   , axiom5
-  , substPropCalcAll
+  , substPropCalc
   , ruleAddS
   , ruleDropS
   , ruleExistence
@@ -78,8 +78,8 @@ substArith x v e | x == v = e
 substArith x v e = x
 
 -- Substitution on equational level for a specific expression with another expression
-substPropCalcAll :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Arith a -> Proof (PropCalc (FOL a))
-substPropCalcAll (Proof f) v e = Proof $ go f v e
+substPropCalc :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Arith a -> Proof (PropCalc (FOL a))
+substPropCalc (Proof f) v e = Proof $ go f v e
   where
   go :: Eq a => PropCalc (FOL a) -> Arith a -> Arith a -> PropCalc (FOL a)
   go (PropVar (Eq a b)) v e     = PropVar (Eq (substArith a v e) (substArith b v e))
@@ -154,7 +154,7 @@ ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Proof (PropCalc 
 ruleSpec (Proof f) v e = Proof $ go f v e
   where
   go :: Eq a => PropCalc (FOL a) -> a -> Arith a -> PropCalc (FOL a)
-  go (PropVar (ForAll x y)) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = fromProof $ substPropCalcAll (Proof y) (Var x) e
+  go (PropVar (ForAll x y)) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = fromProof $ substPropCalc (Proof y) (Var x) e
   go x _ _ = x
 
 -- | Rule of Generalization
@@ -217,8 +217,8 @@ ruleDropS x = x
 ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
 ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   -- in base' and conc, y is Proof y because it's an assumption
-  let base' = substPropCalcAll (Proof y) (Var x) Z
-      conc  = substPropCalcAll (Proof y) (Var x) (S (Var x)) in
+  let base' = substPropCalc (Proof y) (Var x) Z
+      conc  = substPropCalc (Proof y) (Var x) (S (Var x)) in
   -- similarly, z is Proof z here
   if base' == base && conc == Proof z
   then Right $ Proof $ PropVar (ForAll x y)
