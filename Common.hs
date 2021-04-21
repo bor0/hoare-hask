@@ -9,7 +9,9 @@ whenLeft (Left x) f   = f x
 whenLeft (Right x)  _ = Right x
 
 allSame :: Eq a => [a] -> Bool
-allSame xs = all (== head xs) (tail xs)
+allSame []  = False
+allSame [x] = True
+allSame xs  = all (== head xs) (tail xs)
 
 data Pos = GoLeft | GoRight deriving (Eq)
 
@@ -70,8 +72,8 @@ instance Show a => Show (PropCalc a) where
 
 instance Show a => Show (FOL a) where
   show (Eq a b) = "(" ++ show a ++ ")=(" ++ show b ++ ")"
-  show (ForAll x y) = "A" ++ show x ++ ":" ++ show y
-  show (Exists x y) = "E" ++ show x ++ ":" ++ show y
+  show (ForAll x y) = "All " ++ show x ++ ":" ++ show y
+  show (Exists x y) = "Exists " ++ show x ++ ":" ++ show y
 
 instance Show a => Show (Command a) where
   show CSkip           = ";"
