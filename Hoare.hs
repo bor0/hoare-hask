@@ -25,13 +25,13 @@ hoareAssignment v e q =
 hoareConsequence :: Eq a => Proof (PropCalc (FOL a)) -> HoareTriple a -> Proof (PropCalc (FOL a)) -> Either String (HoareTriple a)
 hoareConsequence (Proof (Imp p1 p2)) (HoareTriple p2' c q2) (Proof (Imp q2' q1))
   | p2 == p2' && q2 == q2' = Right $ HoareTriple p1 c q1
-hoareConsequence _ _ _ = Left "Cannot construct proof"
+hoareConsequence _ _ _ = Left "hoareConsequence: Cannot construct proof"
 
 -- | Hoare sequence rule
 hoareSequence :: Eq a => HoareTriple a -> HoareTriple a -> Either String (HoareTriple a)
 hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
   | q1 == q2  = Right $ HoareTriple p (CSequence c1 c2) r
-hoareSequence _ _ = Left "Cannot construct proof"
+hoareSequence _ _ = Left "hoareSequence: Cannot construct proof"
 
 -- | Hoare conditional rule
 hoareConditional :: Eq a => HoareTriple a -> HoareTriple a -> Either String (HoareTriple a)
@@ -43,7 +43,7 @@ hoareConditional (HoareTriple (And p1 b1) c1 q1) (HoareTriple (And (Not p2) b2) 
   | b1 == b2 &&
     p1 == p2 &&
     q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
-hoareConditional _ _ = Left "Cannot construct proof"
+hoareConditional _ _ = Left "hoareConditional: Cannot construct proof"
 
 -- | Hoare while rule
 hoareWhile :: Eq a => HoareTriple a -> Either String (HoareTriple a)
@@ -51,4 +51,4 @@ hoareWhile (HoareTriple (And b p1) c p2)
   | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (And (Not b) p1)
 hoareWhile (HoareTriple (And p1 b) c p2)
   | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (And (Not b) p1)
-hoareWhile _ = Left "Cannot construct proof"
+hoareWhile _ = Left "hoareWhile: Cannot construct proof"

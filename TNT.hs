@@ -191,13 +191,13 @@ ruleTransitivity :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
 ruleTransitivity (Proof (PropVar (Eq a b))) (Proof (PropVar (Eq b' c))) | b == b' = Proof $ PropVar (Eq a c)
 ruleTransitivity x _ = x
 
--- | Add S
+-- | Rule Add S
 -- If r=t is a theorem, then Sr=St is a theorem.
 ruleAddS :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
 ruleAddS (Proof (PropVar (Eq a b))) = Proof $ PropVar (Eq (S a) (S b))
 ruleAddS x = x
 
--- | Drop S
+-- | Rule Drop S
 -- If Sr=St is theorem, then r=t is a theorem.
 ruleDropS :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
 ruleDropS (Proof (PropVar (Eq (S a) (S b)))) = Proof $ PropVar (Eq a b)
@@ -205,13 +205,13 @@ ruleDropS x = x
 
 -- | Rule of Induction
 -- Let X{u} represent a well-formed formula in which the variable u is free, and X{x/u} represent the same string, with each appearance of u replaced by x. If both ∀u:<X{u}⊃X{Su/u}> and X{0/u} are theorems, then ∀u:X{u} is also a theorem.
-ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
+ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
 ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   -- in base' and conc, y is Proof y because it's an assumption
   let base' = substPropCalcAll (Proof y) (Var x) Z
       conc  = substPropCalcAll (Proof y) (Var x) (S (Var x)) in
   -- similarly, z is Proof z here
   if base' == base && conc == Proof z
-  then Proof $ PropVar (ForAll x y)
-  else error "ruleInduction: Cannot prove"
-ruleInduction x _ = x
+  then Right $ Proof $ PropVar (ForAll x y)
+  else Left "ruleInduction: Cannot construct proof"
+ruleInduction x _ = Right x

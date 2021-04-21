@@ -60,9 +60,9 @@ ruleFantasy f x = Proof $ Imp x $ fromProof (f (Proof x))
 
 -- | Rule of Detachment
 -- If x and <x⊃y> are both theorems, then y is a theorem.
-ruleDetachment :: Eq a => Proof (PropCalc a) -> Proof (PropCalc a) -> Proof (PropCalc a)
-ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Proof y
-ruleDetachment _ _ = error "ruleDetachment: Not applicable"
+ruleDetachment :: Eq a => Proof (PropCalc a) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
+ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 
 -- | Contrapositive Rule
 -- <x⊃y> and <~y⊃~x> are interchangeable.
