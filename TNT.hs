@@ -65,9 +65,35 @@ applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Proof $ go pos
   go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))
   go _ x = x
 
--- Get terms, given specific paths
-getTerms :: [(Pos, Path, Path)] -> Proof (PropCalc (FOL a)) -> [Proof (PropCalc (FOL a))]
-getTerms ((pos, path1, path2):paths) x = applyFOLArithRule pos path1 path2 id x : getTerms paths x
+-- Get FOL terms, given specific path
+getFOLTerm :: Path -> PropCalc (FOL a) -> PropCalc (FOL a)
+getFOLTerm (_:xs) (PropVar (ForAll x y)) = getFOLTerm xs y
+getFOLTerm (_:xs) (PropVar (Exists x y)) = getFOLTerm xs y
+getFOLTerm (_:xs) (Not x)                = getFOLTerm xs x
+getFOLTerm (GoLeft:xs) (And x y)         = getFOLTerm xs x
+getFOLTerm (GoLeft:xs) (Imp x y)         = getFOLTerm xs x
+getFOLTerm (GoLeft:xs) (Or x y)          = getFOLTerm xs x
+getFOLTerm (GoRight:xs) (And x y)        = getFOLTerm xs y
+getFOLTerm (GoRight:xs) (Imp x y)        = getFOLTerm xs y
+getFOLTerm (GoRight:xs) (Or x y)         = getFOLTerm xs y
+getFOLTerm _ x = x
+
+-- Get Arith terms, given specific position of equation and path
+getArithTerm :: (Pos, Path) -> PropCalc (FOL a) -> Arith a
+getArithTerm (pos, path) (PropVar (Eq x y)) = if pos == GoLeft then go path x else go path y
+  where
+  go :: Path -> Arith a -> Arith a
+  go (GoLeft:xs) (S x)       = go xs x
+  go (GoLeft:xs) (Plus x y)  = go xs x
+  go (GoLeft:xs) (Mult x y)  = go xs x
+  go (GoRight:xs) (S x)      = go xs x
+  go (GoRight:xs) (Plus x y) = go xs y
+  go (GoRight:xs) (Mult x y) = go xs y
+  go _ x = x
+
+-- Helper wrapper
+getTerm :: (Pos, Path, Path) -> PropCalc (FOL a) -> Arith a
+getTerm (pos, path1, path2) x = getArithTerm (pos, path2) (getFOLTerm path1 x)
 
 -- Substitution function for arithmetical formulas
 substArith :: Eq a => Arith a -> Arith a -> Arith a -> Arith a
@@ -181,12 +207,14 @@ ruleInterchangeR x = x
 -- | Rule of Existence
 -- Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable which otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
 ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
-ruleExistence f v paths | allSame (getTerms paths f) = Proof $ PropVar (Exists v (fromProof (go f paths)))
+ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
+  Proof $ PropVar (Exists v (fromProof (go f paths)))
   where
   go f ((pos, path1, path2):paths) =
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
     in go newProof paths
   go x _ = x
+ruleExistence x _ _ = x
 
 -- | Rule of Symmetry
 -- If r=s is a theorem, then so is s=r

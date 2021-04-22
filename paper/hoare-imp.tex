@@ -252,7 +252,7 @@ data Arith a =
   | Mult (Arith a) (Arith a)
 \end{lstlisting}
 
-Now we can represent things like $0 + 1*X$ as follows:
+Now we can represent things like $0 + 1 \cdot X$ as follows:
 
 \begin{lstlisting}
 > Plus Z (Mult (S Z) (Var X))
@@ -340,19 +340,21 @@ We're given the following:
 \begin{itemize}
 \item \texttt{applyFOLRule} and \texttt{applyArithRule}, both of which are similar to \texttt{applyPropRule}.
 \item \texttt{applyFOLArithRule} which is a combination of \texttt{applyFOLRule} and \texttt{applyArithRule}, which takes a list of paths and then applies the rule to all of them.
-\item \texttt{getTerms} which given a list of paths, returns list of terms - we check that each term is equivalent to others before applying the rule.
+\item \texttt{getTerm} - similar to \texttt{applyArithRule}, except that it returns a term instead of applying a rule to it. This function is used to check that each term is equivalent to others before applying the rule.
 \end{itemize}
 
 Now, the \textbf{Rule of Existence} can be easily implemented:
 
 \begin{lstlisting}
 ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
-ruleExistence f v paths | allSame (getTerms paths f) = Proof $ PropVar (Exists v (fromProof (go f paths)))
+ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
+  Proof $ PropVar (Exists v (fromProof (go f paths)))
   where
   go f ((pos, path1, path2):paths) =
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
     in go newProof paths
   go x _ = x
+ruleExistence x _ _ = x
 \end{lstlisting}
 
 Finally, here's the implementation for the \textbf{Rule of Induction}:
@@ -400,6 +402,14 @@ Here are a few example usages; note how we use a rule from the system we defined
 |- ((0)*(0))=(0)
 > ruleFantasy (\x -> ruleSpec (ruleGeneralize x Q (Just x)) P (S (Var P))) (PropVar (Eq (Var P) Z))
 |- <(P)=(0)> -> <All Q:(P)=(0)>
+> let eg = ruleSpec (axiom2 A) A (Var A)
+|- ((A)+(0))=(A)
+> ruleExistence eg B [(GoLeft,[],[GoLeft]),(GoRight,[],[])] -- apply to As on both sides
+|- Exists B:((B)+(0))=(B)
+> ruleExistence eg B [(GoLeft,[],[GoLeft])] -- apply to A on left side
+|- Exists B:((B)+(0))=(A)
+> ruleExistence eg B [(GoLeft,[],[GoLeft]),(GoLeft,[],[GoRight])] -- applying to A and 0 (different terms) doesn't work
+|- ((A)+(0))=(A)
 \end{lstlisting}
 
 Here's another, slightly longer proof, proving the other direction of the second axiom:
