@@ -1,6 +1,7 @@
 module Hoare where
 
 import Common
+import Gentzen
 import TNT
 
 data HoareTriple a =
@@ -17,7 +18,7 @@ hoareSkip q = HoareTriple q CSkip q
 hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> HoareTriple a
 hoareAssignment v e q =
   HoareTriple
-  (fromProof (substPropCalcAll (Proof q) (Var v) e))
+  (fromProof (substPropCalc (Proof q) (Var v) e))
   (CAssign v e)
   q
 

@@ -259,7 +259,7 @@ Now we can represent things like $0 + 1*A$ as follows:
 (0)+((S(0))*(A))
 \end{lstlisting}
 
-The next step is to implement the components from first-order logic (quantifiers and arithmetical equations). Here's the 
+The next step is to implement the components from first-order logic (quantifiers and arithmetical equations). Here's the syntax for that:
 
 \begin{lstlisting}
 fol    ::= eq arith arith | forall var prop | exists a prop
@@ -361,8 +361,8 @@ Finally, here's the implementation for the \textbf{Rule of Induction}:
 ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
 ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   -- in base' and conc, y is Proof y because it's an assumption
-  let base' = substPropCalcAll (Proof y) (Var x) Z
-      conc  = substPropCalcAll (Proof y) (Var x) (S (Var x)) in
+  let base' = substPropCalc (Proof y) (Var x) Z
+      conc  = substPropCalc (Proof y) (Var x) (S (Var x)) in
   -- similarly, z is Proof z here
   if base' == base && conc == Proof z
   then Right $ Proof $ PropVar (ForAll x y)
@@ -755,8 +755,8 @@ hoareSkip q = HoareTriple q CSkip q
 Note that we pass well-formed instead of proofs... the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
 
 \begin{lstlisting}
-> hoareSkip (BEq (ANum 3) (ANum 3))
-{3 == 3} ; {3 == 3}
+> hoareSkip (PropVar (Eq (Var X) (S (S (S Z)))))
+{(X)=(S(S(S(0))))} ; {(X)=(S(S(S(0))))}
 \end{lstlisting}
 
 \subsubsection{H-Assign}
@@ -767,18 +767,18 @@ Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurren
 hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> HoareTriple a
 hoareAssignment v e q =
   HoareTriple
-  (fromProof (substPropCalcAll (Proof q) (Var v) e))
+  (fromProof (substPropCalc (Proof q) (Var v) e))
   (CAssign v e)
   q
 \end{lstlisting}
 
-We reuse substPropCalcAll from before
+We reuse substPropCalc from before
 
 This implementation will rewrite a variable with an arithmetical expression within a boolean expression. We can now deduce some proofs, such as:
 
 \begin{lstlisting}
-> hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
-{3 == 3} X := 3; {X == 3}
+> hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
+{<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {<(A)=(S(S(0)))> /\ <(0)=(0)>}
 \end{lstlisting}
 
 Given the precondition \texttt{3 = 3}, the command \texttt{X := 3} implies the postcondition \texttt{X = 3}.
@@ -800,13 +800,30 @@ hoareConsequence _ _ _ = Left "hoareConsequence: Cannot construct proof"
 
 As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms.
 
-For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its precondition as follows:
+For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its postcondition (weaken) as follows:
 
 \begin{lstlisting}
-> hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))
-{3 == 3} X := 3; {X == 3}
-> hoareConsequence (BAnd BTrue (BEq (ANum 3) (ANum 3))) (hoareAssignment 'X' (ANum 3) (BEq (AId 'X') (ANum 3))) (BEq (AId 'X') (ANum 3))
-Right {TRUE && 3 == 3} X := 3; {X == 3}
+> let tripleEg = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
+{<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {<(A)=(S(S(0)))> /\ <(0)=(0)>}
+> let pre     = ruleFantasy id $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
+|- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>>
+*Hoare> let post    = ruleFantasy ruleSepL $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
+|- <<(A)=(S(S(0)))> /\ <(0)=(0)>> -> <(A)=(S(S(0)))>
+> hoareConsequence pre tripleEg post
+Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
+\end{lstlisting}
+
+For another example, here's how we can modify the precondition (strengthen):
+
+\begin{lstlisting}
+> let tripleEg = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
+{((B)+(S(0)))=(S(S(0)))} A := (B)+(S(0)); {(A)=(S(S(0)))}
+> let pre = ruleFantasy ruleSepL $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
+|- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <((B)+(S(0)))=(S(S(0)))>
+> let post = ruleFantasy id $ PropVar (Eq (Var A) (S (S Z)))
+|- <(A)=(S(S(0)))> -> <(A)=(S(S(0)))>
+> hoareConsequence pre tripleEg post 
+Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
 \end{lstlisting}
 
 \subsubsection{H-Sequence}
@@ -823,12 +840,12 @@ hoareSequence _ _ = Left "hoareSequence: Cannot construct proof"
 Several commands can be chained as follows:
 
 \begin{lstlisting}
-> let c1 = hoareAssignment 'Y' (ANum 1) (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'X') (AId 'X')))
-{1 == 1 && X == X} Y := 1; {Y == 1 && X == X}
-> let c2 = hoareAssignment 'Z' (AId 'X') (BAnd (BEq (AId 'Y') (ANum 1)) (BEq (AId 'Z') (AId 'X')))
-{Y == 1 && X == X} Z := X; {Y == 1 && Z == X}
+> let c1 = hoareAssignment B (S Z) (And (PropVar $ Eq (Var B) (S Z)) (PropVar $ Eq (Var A) (Var A)))
+{<(S(0))=(S(0))> /\ <(A)=(A)>} B := S(0); {<(B)=(S(0))> /\ <(A)=(A)>}
+> let c2 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var B) (S Z)) (PropVar $ Eq (Var C) (Var A)))
+{<(B)=(S(0))> /\ <(A)=(A)>} C := A; {<(B)=(S(0))> /\ <(C)=(A)>}
 > hoareSequence c1 c2
-Right {1 == 1 && X == X} Y := 1; Z := X; {Y == 1 && Z == X}
+Right {<(S(0))=(S(0))> /\ <(A)=(A)>} B := S(0); C := A; {<(B)=(S(0))> /\ <(C)=(A)>}
 \end{lstlisting}
 
 \subsubsection{H-Conditional}
