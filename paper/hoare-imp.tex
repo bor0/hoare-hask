@@ -868,16 +868,41 @@ hoareConditional _ _ = Left "hoareConditional: Cannot construct proof"
 For the purposes of example, we start by considering the command:
 
 \begin{lstlisting}
-> CIfElse (BNot (BEq (AId 'X') (ANum 0))) CSkip (CAssign 'X' (APlus (AId 'X') (ANum 1)))
-(If (! (X == 0)) Then (;) Else (X := X + 1;));
+> CIfElse (Not (PropVar $ Eq (Var A) Z)) CSkip (CAssign A (Plus (Var A) (S Z)))
+(If (~(A)=(0)) Then (;) Else (A := (A)+(S(0));));
 \end{lstlisting}
 
-The conditionals \texttt{B} and \texttt{P} are given in the code. Now, following the rule to construct a Hoare triple for this command, we have to construct two proofs:
+Following the rule to construct a Hoare triple for this command, we can notice that the conditionals \texttt{B} and \texttt{P} are given in the code, so we have to construct the two triples:
 
 \begin{itemize}
-\item $\{X \neq 0 \land P\} \ ; \{Q\}$
-\item $\{\neg(X \neq 0) \land P\} X := X + 1; \{Q\}$
+\item $\{A \neq 0 \land P\} \ ; \{Q\}$
+\item $\{\neg(A \neq 0) \land P\} A := A + 1; \{Q\}$
 \end{itemize}
+
+\begin{lstlisting}
+> let triple1 = hoareSkip (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+{<~(A)=(0)> /\ <(0)=(0)>} ; {<~(A)=(0)> /\ <(0)=(0)>}
+> let triple2 = hoareAssignment A (S (Var A)) (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+{<~(S(A))=(0)> /\ <(0)=(0)>} A := S(A); {<~(A)=(0)> /\ <(0)=(0)>}
+\end{lstlisting}
+
+Now that we have these triples, the next thing to do is to transform the precondition of the second triple to match the first one.
+
+\begin{lstlisting}
+> let prf1 = ruleFantasy (\pq -> ruleJoin (ruleSpec (axiom1 A) A (Var A)) (ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+|- <<(A)=(0)> /\ <(0)=(0)>> -> <<~(S(A))=(0)> /\ <(0)=(0)>>
+> let prf2 = ruleFantasy id $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+|- <<~(A)=(0)> /\ <(0)=(0)>> -> <<~(A)=(0)> /\ <(0)=(0)>>
+\end{lstlisting}
+
+Given these two proofs, we can now transform the triple easily, and conclude our proof:
+
+\begin{lstlisting}
+> let triple3 = hoareConsequence prf1 triple2 prf2
+Right {<(A)=(0)> /\ <(0)=(0)>} A := S(A); {<~(A)=(0)> /\ <(0)=(0)>}
+> whenRight triple3 (\triple3 -> hoareConditional triple3 triple1)
+Right {(0)=(0)} (If ((A)=(0)) Then (A := S(A);) Else (;)); {<~(A)=(0)> /\ <(0)=(0)>}
+\end{lstlisting}
 
 \subsubsection{H-While}
 
