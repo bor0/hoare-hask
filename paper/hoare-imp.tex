@@ -659,32 +659,28 @@ Note that this language is not strongly normalizing; consider the evaluation of 
 As an example, the factorial program (sequence of commands) can be represented with the pseudo-code:
 
 \begin{lstlisting}
-Z := 1
-Y := 1
-while ~(Z = X)
-  Y := Y * Z
-  Z := Z + 1
+X := 0
+while ~(X = Y)
+  X := X + 1
 \end{lstlisting}
 
 That is, this program will calculate \texttt{Y := X!}. Here's an implementation of it in our language:
 
 \begin{lstlisting}
 > :{
-| factX =
-|   let l1 = CAssign Z (S Z)
-|       l2 = CAssign Y (S Z)
-|       l3 = CWhile (Not (PropVar $ Eq (Var Z) (S (Var X)))) (CSequence l4 l5)
-|       l4 = CAssign Y (Mult (Var Y) (Var Z))
-|       l5 = CAssign Z (S (Var Z))
-|   in CSequence l1 (CSequence l2 l3)
+| countToB =
+|   let l1 = CAssign A Z
+|       l2 = CWhile (Not (PropVar $ Eq (Var A) (Var B))) l3
+|       l3 = CAssign A (S (Var A))
+|   in CSequence l1 l2
 | :}
-> eval (M.fromList [(X, 5)]) factX
-Right (fromList [(X,5),(Y,120),(Z,6)])
+> eval (M.fromList [(B, 3)]) countToB
+Right (fromList [(A,3),(B,3)])
 > let toArith x = if x == 0 then Z else S $ toArith (x - 1)
-> let e = CAssert (PropVar $ Eq (toArith 5) (Var X)) factX (PropVar $ Eq (toArith 120) (Var Y)) in "Assert {X=5} factX {Y=120}: " ++ show (eval (M.fromList [(X, 5)]) e)
-Assert {X=5} factX {Y=120}: Right (fromList [(X,5),(Y,120),(Z,6)])
-> let e = CAssert (PropVar $ Eq (toArith 4) (Var X)) factX (PropVar $ Eq (toArith 120) (Var Y)) in "Assert {X=5} factX {Y=120}: " ++ show (eval (M.fromList [(X, 5)]) e)
-Assert {X=5} factX {Y=120}: Left "Pre-condition does not match!"
+> let e = CAssert (PropVar $ Eq (toArith 5) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
+Assert {B=5} countToB {A=5}: Right (fromList [(A,5),(B,5)])
+> let e = CAssert (PropVar $ Eq (toArith 4) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
+Assert {B=5} countToB {A=5}: Left "Pre-condition does not match!"
 \end{lstlisting}
 
 \section{Hoare logic}
@@ -943,88 +939,6 @@ Right {0 == 0} (While (TRUE) Do {;}); {! (TRUE) && 0 == 0}
 \end{lstlisting}
 
 That is, from an infinite loop ($\bot$), follows anything (false).
-
-\subsection{Example proofs}
-
-So far we only looked at artificial examples, neatly crafted to match the specific forms that the rules accept. Even though the implementation we provided is simple enough, it can still be used to prove some useful real-world facts.
-
-\subsubsection{Assignment (Swap)}
-
-We will show a simple example of the assignment rule.
-
-\begin{lstlisting}
-> hoareAssignment 'a' (APlus (AId 'a') (AId 'b')) (BAnd (BEq (AMinus (AId 'a') (AId 'b')) (AId 'A')) (BEq (AId 'b') (AId 'B')))
-{(a + b - b) == A && b == B} a := a + b; {(a - b) == A && b == B}
-> hoareAssignment 'b' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AMinus (AId 'a') (AId 'b')) (AId 'B')))
-{(a - b) == A && (a - (a - b)) == B} b := (a - b); {b == A && (a - b) == B}
-> hoareAssignment 'a' (AMinus (AId 'a') (AId 'b')) (BAnd (BEq (AId 'b') (AId 'A')) (BEq (AId 'a') (AId 'B')))
-{b == A && (a - b) == B} a := (a - b); {b == A && a == B}
-\end{lstlisting}
-
-That is, we start with the precondition that \texttt{a == A \&\& b == B} and we reach \texttt{b == A \&\& a == B}. We proved that this set of commands will swap the values between two variables. To make this proof more obvious, we can add two additional optimization rules that state $a + b - b = a$ and $a - (a - b) = b$:
-
-\begin{lstlisting}
-aoptimize q@(AMinus (APlus (AId a1) (AId a2)) (AId a3))  = if a2 == a3 then AId a1 else q
-aoptimize q@(AMinus (AId a1) (AMinus (AId a2) (AId a3))) = if a1 == a2 then AId a3 else q
-\end{lstlisting}
-
-The proof can be completed with \texttt{hoareSequence} as follows:
-
-\begin{lstlisting}
-> whenRight (hoareSequence swap1 swap2) (\x -> hoareSequence x swap3)
-Right {a == A && b == B} a := a + b; b := (a - b); a := (a - b); {b == A && a == B}
-\end{lstlisting}
-
-\subsubsection{While (Counting)}
-
-We provide the implementation of a program that increases \texttt{X} up to 10:
-
-\begin{lstlisting}
-> :{
-| countTo10 =
-|   let l1 = CAssign 'X' $ ANum 0
-|       l2 = CWhile (BLt (AId 'X') (ANum 10)) l3
-|       l3 = CAssign 'X' (APlus (AId 'X') (ANum 1))
-|   in CSequence l1 l2
-> eval M.empty countTo10
-Right (fromList [('X',10)])
-\end{lstlisting}
-
-Looking at the while rule, we can determine the values of \texttt{B} and \texttt{S} based on the command:
-
-\[
-\AxiomC{$\{x < 10 \land P\}\texttt{ x := x + 1 }\{P\}$}
-\UnaryInfC{$\{P\}\texttt{while } x < 10\texttt{ do x := x + 1 }\{\neg (x < 10) \land P\}$}
-\DisplayProof
-\]
-
-A sensible value for \texttt{P} would be $x \le 10$, because it holds wherever \texttt{P} is referenced in the formula.
-
-\[
-\AxiomC{$\{x < 10 \land x \le 10\}\texttt{ x := x + 1 }\{x \le 10 \}$}
-\UnaryInfC{$\{x \le 10\}\texttt{while } x < 10\texttt{ do x := x + 1 }\{\neg (x < 10) \land x \le 10 \}$}
-\DisplayProof
-\]
-
-Note that $\neg (x < 10) \land x \le 10$ simplifies to $x = 10$.
-
-We should not use \texttt{HoareTriple} directly, but it can still be useful to show us what we need to prove:
-
-\begin{lstlisting}
-> let ht = HoareTriple (BAnd (BLt (AId 'X') (ANum 10)) (BLe (AId 'X') (ANum 10))) (CAssign 'X' (APlus (AId 'X') (ANum 1))) (BLe (AId 'X') (ANum 10))
-{X < 10 && X <= 10} X := X + 1; {X <= 10}
-> hoareWhile ht
-Right {X <= 10} (While (X < 10) Do {X := X + 1;}); {! (X < 10) && X <= 10}
-\end{lstlisting}
-
-If we are able to produce \texttt{ht} using the rules, we'll be able to prove our statement. Using \texttt{hoareAssignment}, we can produce the following:
-
-\begin{lstlisting}
-> let ht = hoareAssignment 'X' (APlus (AId 'X') (ANum 1)) (BLe (AId 'X') (ANum 10))
-{X + 1 <= 10} X := X + 1; {X <= 10}
-\end{lstlisting}
-
-If we tweak our optimization and substitution rules, we will be able to show that we can get from \texttt{X + 1 <= 10} to \texttt{X <= 9}, and then to \texttt{X < 10}, using the \texttt{H-Consequence} rule.
 
 \section{Conclusion and future work}
 
