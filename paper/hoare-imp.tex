@@ -99,8 +99,8 @@ data PropCalc a =
 With this datatype, we have a way to represent some logical formulas, e.g. $A \land B$:
 
 \begin{lstlisting}
-> And (PropVar A) (PropVar B)
-<A> /\ <B>
+> And (PropVar P) (PropVar Q)
+<P> /\ <Q>
 \end{lstlisting}
 
 We will also need a way to differentiate between well-formed formulas and theorems, since not all well-formed formulas are theorems. For that, we provide the \texttt{Proof} data type constructor:
@@ -115,7 +115,7 @@ fromProof :: Proof a -> a
 fromProof (Proof a) = a
 \end{lstlisting}
 
-Note that \texttt{Proof \$ And (PropVar A) (PropVar B)} is different from \texttt{And (PropVar A) (PropVar B)}. However, this constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
+Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \texttt{And (PropVar P) (PropVar Q)}. However, this constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
 
 \subsection{Rules}
 
@@ -252,11 +252,11 @@ data Arith a =
   | Mult (Arith a) (Arith a)
 \end{lstlisting}
 
-Now we can represent things like $0 + 1*A$ as follows:
+Now we can represent things like $0 + 1*X$ as follows:
 
 \begin{lstlisting}
-> Plus Z (Mult (S Z) (Var A))
-(0)+((S(0))*(A))
+> Plus Z (Mult (S Z) (Var X))
+(0)+((S(0))*(X))
 \end{lstlisting}
 
 The next step is to implement the components from first-order logic (quantifiers and arithmetical equations). Here's the syntax for that:
@@ -541,7 +541,7 @@ beval ctx (Or b1 b2)             = beval ctx b1 || beval ctx b2
 beval ctx (Imp b1 b2)            = not (beval ctx b1) || beval ctx b2
 \end{lstlisting}
 
-Here are a few example evaluations:
+Note that we ignore quantifiers in this implementation, because we only rely on propositional logic and substitute variables based on the context. Here are a few example evaluations:
 
 \begin{lstlisting}
 > let e = Plus (Var X) (S Z) in show e ++ " = " ++ show (aeval (M.fromList [(X, 5)]) e)
@@ -755,8 +755,8 @@ hoareSkip q = HoareTriple q CSkip q
 Note that we pass well-formed instead of proofs... the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
 
 \begin{lstlisting}
-> hoareSkip (PropVar (Eq (Var X) (S (S (S Z)))))
-{(X)=(S(S(S(0))))} ; {(X)=(S(S(S(0))))}
+> hoareSkip (PropVar (Eq (Var A) (S (S (S Z)))))
+{(A)=(S(S(S(0))))} ; {(A)=(S(S(S(0))))}
 \end{lstlisting}
 
 \subsubsection{H-Assign}
