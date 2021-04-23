@@ -2,6 +2,7 @@ module Hoare where
 
 import Common
 import Gentzen
+import Imp
 import TNT
 
 data HoareTriple a =

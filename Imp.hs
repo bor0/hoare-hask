@@ -1,7 +1,25 @@
 module Imp where
 
 import Common
+import Gentzen
+import TNT
 import qualified Data.Map as M
+
+data Command a =
+  CSkip
+  | CAssign a (Arith a)
+  | CSequence (Command a) (Command a)
+  | CIfElse (PropCalc (FOL a)) (Command a) (Command a)
+  | CWhile (PropCalc (FOL a)) (Command a)
+  | CAssert (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
+
+instance Show a => Show (Command a) where
+  show CSkip           = ";"
+  show (CAssign x y)   = show x ++ " := " ++ show y ++ ";"
+  show (CSequence x y) = show x ++ " " ++ show y
+  show (CIfElse x y z) = "(If (" ++ show x ++ ") Then (" ++ show y ++ ") Else (" ++ show z ++ "));"
+  show (CWhile x y)    = "(While (" ++ show x ++ ") Do {" ++ show y ++ "});"
+  show (CAssert x y z) = "(Assert {" ++ show x ++ "} (" ++ show y ++ ") {" ++ show z ++ "});"
 
 type Context a = M.Map a Integer
 

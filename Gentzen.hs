@@ -2,6 +2,23 @@ module Gentzen where
 
 import Common
 
+{- Data defs -}
+
+data PropCalc a =
+  PropVar a
+  | Not (PropCalc a)
+  | And (PropCalc a) (PropCalc a)
+  | Or (PropCalc a) (PropCalc a)
+  | Imp (PropCalc a) (PropCalc a)
+  deriving (Eq)
+
+instance Show a => Show (PropCalc a) where
+  show (PropVar a) = show a
+  show (Not a)     = "~" ++ show a
+  show (And a b)   = "<" ++ show a ++ "> /\\ <" ++ show b ++ ">"
+  show (Or a b)    = "<" ++ show a ++ "> \\/ <" ++ show b ++ ">"
+  show (Imp a b)   = "<" ++ show a ++ "> -> <" ++ show b ++ ">"
+
 {- Helper functions -}
 
 -- | Apply prop rule to a specific portion of a formula
