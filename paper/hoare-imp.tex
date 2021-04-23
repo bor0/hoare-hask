@@ -218,7 +218,7 @@ Now we can use it to apply the double negation rule to $R$ within $P \land (Q \l
 
 \section{Number theory}
 
-In this section we provide an implementation of a simple number-theoretical system, using the same literature (GEB).
+In this section we provide an implementation of a number-theoretical system, using the same literature (GEB).
 
 \subsection{Syntax}
 
@@ -445,8 +445,7 @@ let step1 = axiom3 A B
          -- |- ((D)+(S(S(C))))=((S(D))+(S(C)))
          step11 = ruleTransitivity step10 step6
          -- |- All D:((D)+(S(S(C))))=((S(D))+(S(C)))
-         step12 = ruleGeneralize step11 D (Just premise)
-     in step12
+         in ruleGeneralize step11 D (Just premise)
     -- |- <All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
     step7 = ruleFantasy f premise in
     -- |- All C:<All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
@@ -721,9 +720,11 @@ eval ctx (CAssert b1 c b2) =
   then whenRight (eval ctx c)
        (\ctx' -> if beval ctx' b2
                   then Right ctx'
-                  else Left "Post-condition does not match!")
-  else Left "Pre-condition does not match!"
+                  else Left "Assert: Post-condition does not match!")
+  else Left "Assert: Pre-condition does not match!"
 \end{lstlisting}
+
+Note that this language is not strongly normalizing; consider the evaluation of \texttt{CWhile BTrue CSkip}.
 
 As an example, a program that counts from 0 to $B$ can be represented as follows:
 
@@ -758,7 +759,7 @@ Assert {B=5} countToB {A=5}: Left "Pre-condition does not match!"
 
 \section{Hoare logic}
 
-In the previous chapter, we implemented assertions (\texttt{CAssert}) at the run-time (\texttt{eval}) level. The biggest disadvantage of that is we have to do a full evaluation to deduce some facts about programs; considering the assertion example of the \texttt{factX} program, it has to actually evaluate the factorial to conclude something. This motivates the need for an additional evaluation strategy that will allow us to deduce facts about programs without doing a full evaluation.
+In the previous chapter, we implemented assertions (\texttt{CAssert}) at the run-time (\texttt{eval}) level. The biggest disadvantage of that is we have to do a full evaluation to deduce some facts about programs; considering the assertion example of the \texttt{countToB} program, it has to actually evaluate the program to assert something. This motivates the need for an additional evaluation strategy that will allow us to deduce facts about programs without doing a full evaluation.
 
 Some programming languages, like Python, don't have a compile step and the \texttt{eval} function we provided is kind of equivalent to evaluating programs in Python. But some programming languages do have a compile step, like C or Haskell, and this compilation step can be beneficial in that it can do additional different checks, e.g., type checks. That's what we'll do here - implement a "compile"-time check (just another evaluation strategy) using some of the rules in Hoare's logic, and this check can be used to check the validity of a program, before fully evaluating it.
 
@@ -821,7 +822,7 @@ hoareSkip :: PropCalc (FOL a) -> HoareTriple a
 hoareSkip q = HoareTriple q CSkip q
 \end{lstlisting}
 
-Note that we pass well-formed instead of proofs... the validity of the precondition is not being checked (since that would require evaluating \texttt{Aexp}/\texttt{Bexp} with a context); the proof merely states that assuming some precondition, a command produces some postcondition.
+Note that the rule accepts well-formed formulas instead of proven ones, as the validity of the precondition is not being checked; the triple merely states that assuming some precondition, a command produces some postcondition.
 
 \begin{lstlisting}
 > hoareSkip (PropVar (Eq (Var A) (S (S (S Z)))))
@@ -834,31 +835,21 @@ Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurren
 
 \begin{lstlisting}
 hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> HoareTriple a
-hoareAssignment v e q =
-  HoareTriple
-  (fromProof (substPropCalc (Proof q) (Var v) e))
-  (CAssign v e)
-  q
+hoareAssignment v e q = HoareTriple (fromProof (substPropCalc (Proof q) (Var v) e)) (CAssign v e) q
 \end{lstlisting}
 
-We reuse substPropCalc from before
-
-This implementation will rewrite a variable with an arithmetic expression within a boolean expression. We can now deduce some proofs, such as:
+Since the implementation relies on \texttt{PropCalc}, it's natural to re-use \texttt{substPropCalc}. Example deduction:
 
 \begin{lstlisting}
 > hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
 {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {<(A)=(S(S(0)))> /\ <(0)=(0)>}
 \end{lstlisting}
 
-Given the precondition \texttt{3 = 3}, the command \texttt{X := 3} implies the postcondition \texttt{X = 3}.
-
 \subsubsection{H-Consequence}
 
 The consequence rule can be used to strengthen (make more specific) a precondition and/or weaken (make more generic) a postcondition in a Hoare triple.
 
-Ideally, the implication in the consequence rule would represent the evaluation of higher-order logic, but we're limiting it to optimization (our own small logic) for simplicity. That is, we use $\hookrightarrow$ in place of $\to$ in the rule.
-
-In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (in this case specifically, the optimization result of \texttt{boptimize}) into a Hoare triple.
+The implication in the consequence rule represents an "evaluation" from the previously defined logic. In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (another system) into a Hoare triple.
 
 \begin{lstlisting}
 hoareConsequence :: Eq a => Proof (PropCalc (FOL a)) -> HoareTriple a -> Proof (PropCalc (FOL a)) -> Either String (HoareTriple a)
@@ -919,18 +910,14 @@ Right {<(S(0))=(S(0))> /\ <(A)=(A)>} B := S(0); C := A; {<(B)=(S(0))> /\ <(C)=(A
 
 \subsubsection{H-Conditional}
 
-We provide an implementation for the Hoare conditional rule, covering both cases for commutativity of logical and.
+We provide an implementation for the Hoare conditional rule.
 
 \begin{lstlisting}
 hoareConditional :: Eq a => HoareTriple a -> HoareTriple a -> Either String (HoareTriple a)
 hoareConditional (HoareTriple (And b1 p1) c1 q1) (HoareTriple (And (Not b2) p2) c2 q2)
-  | b1 == b2 &&
-    p1 == p2 &&
-    q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | b1 == b2 && p1 == p2 && q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional (HoareTriple (And p1 b1) c1 q1) (HoareTriple (And (Not p2) b2) c2 q2)
-  | b1 == b2 &&
-    p1 == p2 &&
-    q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
+  | b1 == b2 && p1 == p2 && q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional _ _ = Left "hoareConditional: Cannot construct proof"
 \end{lstlisting}
 
@@ -950,7 +937,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 {<~(S(A))=(0)> /\ <(0)=(0)>} A := S(A); {<~(A)=(0)> /\ <(0)=(0)>}
 \end{lstlisting}
 
-Now that we have these triples, the next thing to do is to transform the precondition of the second triple to match the first one.
+The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
 > let prf1 = ruleFantasy (\pq -> ruleJoin (ruleSpec (axiom1 A) A (Var A)) (ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
@@ -985,29 +972,29 @@ The implementation for constructing the rule is straightforward, but the tricky 
 
 \subsection{A complete proof example}
 
-In this section, we will provide proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution.
+In this section, we will provide a proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution.
 
 According to the program definition, we need to apply the rules in order: H-Sequence, H-Assign, H-While.
 
-Looking at the while rule, we can determine the values of \texttt{B} and \texttt{S} based on the command. A valid invariant would be $\exists C, A + C = B$.
+Looking at the while rule, we can determine the values of \texttt{B} and \texttt{S} based on the command; meanwhile, one valid invariant would be $\exists C: A + C = B$.
 
 \[
-\AxiomC{$\{\neg(A = B) \land \exists C, A + C = B\}\texttt{ A := S(A) }\{\exists C, A + C = B\}$}
+\AxiomC{$\{\neg(A = B) \land \exists C: A + C = B\}A\texttt{ := }S(A) \ \{\exists C: A + C = B\}$}
 \RightLabel{(step1)}
-\UnaryInfC{$\{P\}\texttt{while } \neg(A = B) \texttt{ do A := S(A) }\{\neg (\neg (A = B)) \land \exists C, A + C = B\}$}
+\UnaryInfC{$\{P\}\texttt{while } \neg(A = B) \texttt{ do }A\texttt{ := }S(A) \ \{\neg (\neg (A = B)) \land \exists C: A + C = B\}$}
 \DisplayProof
 \]
 
-Further, since this rule has to be followed in sequence with the assignment rule, it dictates the pre and post conditions for it:
+Further, since this rule has to be followed in sequence with the assignment rule, it dictates the conditions for it:
 
 \[
 \AxiomC{}
 \RightLabel{(step2)}
-\UnaryInfC{$\{\exists C, 0 + C = B\}\texttt{ A := 0 } \{\exists C, A + C = B\}$}
+\UnaryInfC{$\{\exists C: 0 + C = B\}\texttt{ A := 0 } \{\exists C: A + C = B\}$}
 \DisplayProof
 \]
 
-The only thing remaining to prove is the hypothesis for the H-While rule.
+The only thing remaining to prove is the hypothesis for the H-While rule, so we have the following code:
 
 \begin{lstlisting}
 step1 = whenRight step3 (\step3 -> hoareSequence step2 step3)
@@ -1015,16 +1002,15 @@ step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var 
 step3 = whenRight ??? hoareWhile
 \end{lstlisting}
 
-To start with, we'll consider the following code:
+To start with, we consider the following code:
 
 \begin{lstlisting}
 > let step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
 {Exists C:((S(A))+(C))=(B)} A := S(A); {Exists C:((A)+(C))=(B)}
 \end{lstlisting}
 
-It's close but does not match the hypothesis of the H-While application exactly, specifically the pre-condition. We will apply the H-Consequence rule, and to do that, we need to provide proof for the statement:
-
-$$\neg (A = B) \land \exists C, A + C = B \to \exists C, S(A) + C = B$$
+The resulting triple is close, but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We will apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
+$$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 
 We now have the following:
 
@@ -1053,26 +1039,21 @@ preConseq =
            -- |- ((S(A))+(C))=(B)
            step6 = ruleTransitivity step5 step3
            -- |- Exists C:((S(A))+(C))=(B)
-           step7 = ruleExistence step6 C []
-       in step7
+           in ruleExistence step6 C []
      -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
      in ruleFantasy f premise
 \end{lstlisting}
 
-Finally:
-
-\begin{lstlisting}
-> step1
-Right {Exists C:((0)+(C))=(B)} A := 0; (While (~(A)=(B)) Do {A := S(A);}); {<~~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>}
-\end{lstlisting}
+Finally, \texttt{step1} produces the triple:
+$$\{\exists C: 0+C=B\} A \texttt{ := } 0 \texttt{; while } \neg(A = B) \texttt{ do }A\texttt{ := }S(A) \ \{\neg (\neg (A = B)) \land \exists C: A + C = B\}$$
 
 \section{Conclusion and future work}
 
-Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We showed how to achieve this, by providing a simple implementation of Hoare logic.
+Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We achieved this by providing an implementation of Hoare logic.
 
-The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. It feels like working with assembly/machine code. Further, the underlying number-theoretical system uses Peano's axioms which are limited to natural numbers - we could extend it to integers for better expressibility. Lastly, we could make the logical system more expressive by allowing new definitions of total recursive functions to be incorporated.
+The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious; it feels like working with assembly/machine code. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. Further, the underlying number-theoretical system uses Peano's axioms which are limited to natural numbers - we could extend it to integers for better expressibility. Lastly, we could increase the expressiveness of the logical system by allowing additional definitions to be incorporated.
 
-We've seen how complex systems like these can get. Nevertheless, this introductory paper may serve as a good starting point toward building systems that allow expressing software verification.
+Even though the mathematical formulas for these systems look simple, implementing them is a different matter. Looking at the implementation, we see how complex these systems can get. Nevertheless, this introductory paper may serve as a good starting point toward building systems of similar nature.
 
 \section{Conflict of interest}
 
