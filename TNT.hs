@@ -242,6 +242,8 @@ ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) pat
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
     in go newProof paths
   go x _ = x
+ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
+  Proof $ PropVar (Exists v (fromProof f))
 ruleExistence x _ _ = x
 
 -- | Rule of Symmetry
