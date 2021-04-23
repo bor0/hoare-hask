@@ -44,8 +44,7 @@ lemma1 =
            -- |- ((D)+(S(S(C))))=((S(D))+(S(C)))
            step11 = ruleTransitivity step10 step6
            -- |- All D:((D)+(S(S(C))))=((S(D))+(S(C)))
-           step12 = ruleGeneralize step11 D (Just premise)
-       in step12
+           in ruleGeneralize step11 D (Just premise)
       -- |- <All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
       step7 = ruleFantasy f premise in
       -- |- All C:<All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
@@ -98,8 +97,7 @@ preConseq =
            -- |- ((S(A))+(C))=(B)
            step6 = ruleTransitivity step5 step3
            -- |- Exists C:((S(A))+(C))=(B)
-           step7 = ruleExistence step6 C []
-       in step7
+           in ruleExistence step6 C []
      -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
      in ruleFantasy f premise
 
