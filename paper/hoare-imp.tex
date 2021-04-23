@@ -393,44 +393,68 @@ axiom4 a = Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
 axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
 \end{lstlisting}
 
-Here are a few example usages; note how we use a rule from the system we defined earlier:
+Here's a complete proof of the fact that $\forall A, \forall B, A + S B = S(A + B)$:
 
 \begin{lstlisting}
-> axiom4 P
-|- All P:((P)*(0))=(0)
-> ruleSpec (axiom4 P) P Z
-|- ((0)*(0))=(0)
-> ruleFantasy (\x -> ruleSpec (ruleGeneralize x Q (Just x)) P (S (Var P))) (PropVar (Eq (Var P) Z))
-|- <(P)=(0)> -> <All Q:(P)=(0)>
-> let eg = ruleSpec (axiom2 A) A (Var A)
-|- ((A)+(0))=(A)
-> ruleExistence eg B [(GoLeft,[],[GoLeft]),(GoRight,[],[])] -- apply to As on both sides
-|- Exists B:((B)+(0))=(B)
-> ruleExistence eg B [(GoLeft,[],[GoLeft])] -- apply to A on left side
-|- Exists B:((B)+(0))=(A)
-> ruleExistence eg B [(GoLeft,[],[GoLeft]),(GoLeft,[],[GoRight])] -- applying to A and 0 (different terms) doesn't work
-|- ((A)+(0))=(A)
+-- lemma1 |- All A:All B:((A)+(S(B)))=(S((A)+(B)))
+let step1 = axiom3 A B
+    -- |- All B:((D)+(S(B)))=(S((D)+(B)))
+    step2 = ruleSpec step1 A (Var D)
+    -- |- ((D)+(S(S(C))))=(S((D)+(S(C))))
+    step3 = ruleSpec step2 B (S (Var C))
+    -- |- All B:((S(D))+(S(B)))=(S((S(D))+(B)))
+    step4 = ruleSpec step1 A (S (Var D))
+    -- |- ((S(D))+(S(C)))=(S((S(D))+(C)))
+    step5 = ruleSpec step4 B (Var C)
+    -- |- (S((S(D))+(C)))=((S(D))+(S(C)))
+    step6 = ruleSymmetry step5
+    -- All D:((D)+(S(C)))=((S(D))+(C))
+    premise = PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))
+    f premise =
+     -- |- ((D)+(S(C)))=((S(D))+(C))
+     let step8 = ruleSpec premise D (Var D)
+         -- |- (S((D)+(S(C))))=(S((S(D))+(C)))
+         step9 = ruleAddS step8
+         -- |- ((D)+(S(S(C))))=(S((S(D))+(C)))
+         step10 = ruleTransitivity step3 step9
+         -- |- ((D)+(S(S(C))))=((S(D))+(S(C)))
+         step11 = ruleTransitivity step10 step6
+         -- |- All D:((D)+(S(S(C))))=((S(D))+(S(C)))
+         step12 = ruleGeneralize step11 D (Just premise)
+     in step12
+    -- |- <All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
+    step7 = ruleFantasy f premise in
+    -- |- All C:<All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
+    ruleGeneralize step7 C Nothing
 \end{lstlisting}
 
-Here's another, slightly longer proof, proving the other direction of the second axiom:
+Here's another proof, proving that $\forall D, \forall B, D + 1 = (D + 1) + 0$:
 
 \begin{lstlisting}
-> let egIndBase = ruleSpec (ruleSpec (axiom2 P) P Z) Q Z
-|- ((0)+(0))=(0)
-> let egIndHyp_1 = (axiom3 Q P)
-|- All Q:All P:((Q)+(S(P)))=(S((Q)+(P)))
-> let egIndHyp_2 = ruleSpec egIndHyp_1 Q Z
-|- All P:((0)+(S(P)))=(S((0)+(P)))
-> let egIndHyp_3 = ruleSpec egIndHyp_2 P (Var Q)
-|- ((0)+(S(Q)))=(S((0)+(Q)))
-> let egIndHyp_4 = ruleFantasy ruleAddS (PropVar (Eq (Plus Z (Var Q)) (Var Q)))
-|- <((0)+(Q))=(Q)> -> <(S((0)+(Q)))=(S(Q))>
-> let egIndHyp_5 = let rule formula = ruleTransitivity egIndHyp_3 formula in applyFOLRule [GoRight] rule egIndHyp_4
-|- <((0)+(Q))=(Q)> -> <((0)+(S(Q)))=(S(Q))>
-> let egIndHyp = ruleGeneralize egIndHyp_5 Q Nothing
-|- All Q:<((0)+(Q))=(Q)> -> <((0)+(S(Q)))=(S(Q))>
-> egInd = ruleInduction egIndBase egIndHyp
-Right |- All Q:((0)+(Q))=(Q)
+-- lemma2 |- All D:((D)+(S(0)))=((S(D))+(0))
+let step1 = axiom3 A B
+    -- |- All B:((D)+(S(B)))=(S((D)+(B)))
+    step2 = ruleSpec step1 A (Var D)
+    -- |- ((D)+(S(S(C))))=(S((D)+(S(C))))
+    step3 = ruleSpec step2 B (S (Var C))
+    -- |- ((D)+(S(0)))=(S((D)+(0)))
+    step4 = ruleSpec step2 B Z
+    -- |- All A:((A)+(0))=(A)
+    step5 = axiom2 A
+    -- |- ((D)+(0))=(D)
+    step6 = ruleSpec step5 A (Var D)
+    -- |- (S((D)+(0)))=(S(D))
+    step7 = ruleAddS step6
+    -- |- ((D)+(S(0)))=(S(D))
+    step8 = ruleTransitivity step4 step7
+    -- |- ((S(D))+(0))=(S(D))
+    step9 = ruleSpec step5 A (S (Var D))
+    -- |- (S(D))=((S(D))+(0))
+    step10 = ruleSymmetry step9
+    -- |- ((D)+(S(0)))=((S(D))+(0))
+    step11 = ruleTransitivity step8 step10 in
+    -- |- All D:((D)+(S(0)))=((S(D))+(0))
+    ruleGeneralize step11 D Nothing
 \end{lstlisting}
 
 \section{Imperative language}
@@ -666,15 +690,15 @@ eval ctx (CAssert b1 c b2) =
 
 Note that this language is not strongly normalizing; consider the evaluation of \texttt{CWhile BTrue CSkip}.
 
-As an example, the factorial program (sequence of commands) can be represented with the pseudo-code:
+As an example, a program that counts from 0 to $B$ can be represented with the pseudo-code:
 
 \begin{lstlisting}
-X := 0
-while ~(X = Y)
-  X := X + 1
+A := 0
+while ~(A = B)
+  A := A + 1
 \end{lstlisting}
 
-That is, this program will calculate \texttt{Y := X!}. Here's an implementation of it in our language:
+Here's an implementation of it in our language:
 
 \begin{lstlisting}
 > :{
@@ -828,7 +852,7 @@ For another example, here's how we can modify the precondition (strengthen):
 |- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <((B)+(S(0)))=(S(S(0)))>
 > let post = ruleFantasy id $ PropVar (Eq (Var A) (S (S Z)))
 |- <(A)=(S(S(0)))> -> <(A)=(S(S(0)))>
-> hoareConsequence pre tripleEg post 
+> hoareConsequence pre tripleEg post
 Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
 \end{lstlisting}
 
@@ -925,30 +949,88 @@ hoareWhile _ = Left "hoareWhile: Cannot construct proof"
 
 The implementation for constructing the rule is straightforward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
 
-Similarly as we did with the \texttt{H-Conditional} rule, for the purposes of example, we will consider the command:
+\subsection{A complete proof example}
+
+In this section we will provide a proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution.
+
+According to the program definition, we need to apply the rules in order: H-Sequence, H-Assign, H-While.
+
+Looking at the while rule, we can determine the values of \texttt{B} and \texttt{S} based on the command. A valid invariant would be $\exists C, A + C = B$.
+
+\[
+\AxiomC{$\{\neg(A = B) \land \exists C, A + C = B\}\texttt{ A := S A }\{\exists C, A + C = B\}$}
+\RightLabel{(step1)}
+\UnaryInfC{$\{P\}\texttt{while } \neg(A = B) \texttt{ do A := S A }\{\neg (\neg (A = B)) \land \exists C, A + C = B\}$}
+\DisplayProof
+\]
+
+Further, since this rule has to be followed in sequence with the assigment one, it dictates the pre and post conditions for it:
+
+\[
+\AxiomC{}
+\RightLabel{(step2)}
+\UnaryInfC{$\{\exists C, 0 + C = B\}\texttt{ A := 0 } \{\exists C, A + C = B\}$}
+\DisplayProof
+\]
+
+The only thing remaining to prove is the hypothesis for the H-While rule.
 
 \begin{lstlisting}
-> CWhile BTrue CSkip
-(While (TRUE) Do {;});
+step1 = whenRight step3 (\step3 -> hoareSequence step2 step3)
+step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+step3 = whenRight ??? hoareWhile
 \end{lstlisting}
 
-In this case, we get that \texttt{B} is \texttt{BTrue} and \texttt{S} is \texttt{CSkip}. Thus, we must provide the Hoare triple $\{\top \land P \} \ ; \{P\}$. We can use \texttt{hoareSkip} together with \texttt{hoareConsequence} to construct such triple as follows:
+To start with, we'll consider the following code:
 
 \begin{lstlisting}
-> let c = hoareSkip (BEq (ANum 0) (ANum 0))
-{0 == 0} ; {0 == 0}
-> hoareConsequence (BAnd BTrue (BEq (ANum 0) (ANum 0))) c (BEq (ANum 0) (ANum 0))
-Right {TRUE && 0 == 0} ; {0 == 0}
+> let step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+{Exists C:((S(A))+(C))=(B)} A := S(A); {Exists C:((A)+(C))=(B)}
 \end{lstlisting}
 
-Now we can deduce the following:
+It's close, but does not match the hypothesis of the H-While application exactly, specifically the pre-condition. We will apply the H-Consequence rule, and in order to do that, we need to provide a proof for the statement:
+
+$$\neg (A = B) \land \exists C, A + C = B \to \exists C, S A + C = B$$
+
+We now have the following:
 
 \begin{lstlisting}
-> whenRight (hoareConsequence (BAnd BTrue (BEq (ANum 0) (ANum 0))) c (BEq (ANum 0) (ANum 0))) (\x -> hoareWhile x)
-Right {0 == 0} (While (TRUE) Do {;}); {! (TRUE) && 0 == 0}
+preConseq  = ???
+postConseq = ruleFantasy id (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+step4 = hoareConsequence preConseq step5 postConseq
 \end{lstlisting}
 
-That is, from an infinite loop ($\bot$), follows anything (false).
+Here's the complete proof:
+
+\begin{lstlisting}
+preConseq = 
+  let premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+      f premise =
+       -- |- ~~Exists C:((A)+(C))=(B)
+       let step1 = ruleDoubleTildeIntro (ruleSepR premise)
+           -- |- ~~((A)+(S(C)))=(B)
+           step2 = applyFOLRule [GoLeft] (\x -> ruleSpec (ruleInterchangeR x) C (S (Var C))) step1
+           -- |- ((A)+(S(C)))=(B)
+           step3 = ruleDoubleTildeElim step2
+           -- |- ((A)+(S(C)))=((S(A))+(C)). theorem = ruleInduction lemma2 lemma1
+           step4 = ruleSpec (ruleSpec theorem C (Var C)) D (Var A)
+           -- |- ((S(A))+(C))=((A)+(S(C)))
+           step5 = ruleSymmetry step4
+           -- |- ((S(A))+(C))=(B)
+           step6 = ruleTransitivity step5 step3
+           -- |- Exists C:((S(A))+(C))=(B)
+           step7 = ruleExistence step6 C []
+       in step7
+     -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
+     in ruleFantasy f premise
+\end{lstlisting}
+
+Finally:
+
+\begin{lstlisting}
+> step1
+Right {Exists C:((0)+(C))=(B)} A := 0; (While (~(A)=(B)) Do {A := S(A);}); {<~~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>}
+\end{lstlisting}
 
 \section{Conclusion and future work}
 
