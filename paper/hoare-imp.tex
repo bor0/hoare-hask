@@ -116,15 +116,15 @@ fromProof :: Proof a -> a
 fromProof (Proof a) = a
 \end{lstlisting}
 
-Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \texttt{And (PropVar P) (PropVar Q)}. However, this constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
+Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \texttt{And (PropVar P) (PropVar Q)}. This constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
 
 \subsection{Rules}
 
 These rules come from GEB, and we list them here for posterity:
 
 \begin{itemize}
-\item \textbf{Fantasy Rule}: If $x$ were a theorem, $y$ would be a theorem ($<x \to y>$).
-\item \textbf{Carry Over Rule}: Inside a fantasy, any theorem from the "reality" one level higher can be brought in and used.
+\item \textbf{Fantasy Rule (Implication)}: If $x$ were a theorem, $y$ would be a theorem ($<x \to y>$).
+\item \textbf{Carry Over Rule}: Inside a fantasy, any theorem from the "reality" a level higher can be brought in and used.
 \item \textbf{Contrapositive Rule}: $< x \to y>$ and $< \neg y \to \neg x>$ are interchangeable.
 \item \textbf{De Morgan's Rule}: $< \neg x \land \neg y>$ and $\neg<x \lor y>$ are interchangeable.
 \item \textbf{Double-Tilde Rule}: The string $\neg\neg$ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
@@ -151,7 +151,7 @@ ruleSepR x = x
 
 That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else.
 
-Perhaps the most powerful rule is the implication-intro (fantasy), and its counter-part implication-elim (detachment). Here's their implementation:
+Perhaps the most powerful rule is the implication-intro (fantasy), and its counter-part implication-elim (detachment):
 
 \begin{lstlisting}
 ruleFantasy :: (Proof (PropCalc a) -> Proof (PropCalc a)) -> PropCalc a -> Proof (PropCalc a)
@@ -162,14 +162,14 @@ ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
 ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 \end{lstlisting}
 
-Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms. That is because the hypothesis needn't be necessarily true, it only states that "In the case this hypothesis is true, that is true".
-
-For the other rule, we use \texttt{Either} to distinguish between provable and unprovable terms. We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work. Now we can prove the following:
+Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms. That is because the hypothesis needn't be necessarily true, it only states that "In the case this hypothesis is true, that is true". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work.
 
 \begin{lstlisting}
 > ruleFantasy (\pq -> ruleJoin (ruleSepR pq) (ruleSepL pq)) (And (PropVar P) (PropVar Q))
 |- <<P> /\ <Q>> -> <<Q> /\ <P>>
 \end{lstlisting}
+
+For the other rule, we use \texttt{Either} to distinguish between provable and unprovable terms.
 
 Here's another example implementation for the \textbf{Double-Tilde Rule}:
 
@@ -187,16 +187,14 @@ ruleDoubleTildeElim x = x
 \end{lstlisting}
 \end{minipage}
 
-However, our current implementation doesn't allow to this rule to e.g. $R$ within $P \land (Q \lor R)$, because it only accepts a full formula and doesn't know how to do replacements in its subformulas. To address this, we create a function that accepts a "path" (which subformula we apply it to), what rule should be applied, and the formula itself.
+However, in the current implementation we can't apply a rule to e.g. $R$ within $P \land (Q \lor R)$, because it only accepts a full formula and doesn't know how to do replacements in its subformulas. To address this, we create a function that accepts a "path" (which subformula we apply it to), what rule should be applied, and the formula itself.
 
 \begin{lstlisting}
 data Pos = GoLeft | GoRight
-
 type Path = [Pos]
 
 applyPropRule :: Path -> (Proof (PropCalc a) -> Proof (PropCalc a)) -> Proof (PropCalc a) -> Proof (PropCalc a)
-applyPropRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x
-  where
+applyPropRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x where
   go :: Path -> (PropCalc a -> PropCalc a) -> PropCalc a -> PropCalc a
   go (GoLeft:xs) f (Not x) = Not (go xs f x)
   go (GoLeft:xs) f (And x y) = And (go xs f x) y
@@ -209,7 +207,7 @@ applyPropRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x
   go _ f x = f x
 \end{lstlisting}
 
-Of course, going left or right doesn't make much sense for unary operators, so our implementation will just drill down in the \texttt{Not} operator if it finds either a left or a right. But, going left and right do make sense for binary operators - we drill on the left and the right argument respectively.
+Of course, going left or right doesn't make much sense for unary operators, so the implementation will just drill down in the \texttt{Not} operator if it finds either a left or a right. But, going left or right do make sense for binary operators - we drill on the left and the right argument respectively.
 
 Now we can use it to apply the double negation rule to $R$ within $P \land (Q \lor R)$ as follows:
 
@@ -224,7 +222,7 @@ In this section we provide an implementation of a simple number-theoretical syst
 
 \subsection{Syntax}
 
-We start by introducing a language that can represent arithmetic expressions. The syntax of the language expressed in BNF is as follows:
+We start by introducing a language that can represent arithmetic expressions.
 
 \begin{lstlisting}
 digit  ::= "0" | "1" | ... | "8" | "9"
@@ -303,8 +301,7 @@ To start, we provide an implementation of \texttt{substPropCalc}, which replaces
 
 \begin{lstlisting}
 substPropCalc :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Arith a -> Proof (PropCalc (FOL a))
-substPropCalc (Proof f) v e = Proof $ go f v e
-  where
+substPropCalc (Proof f) v e = Proof $ go f v e where
   go :: Eq a => PropCalc (FOL a) -> Arith a -> Arith a -> PropCalc (FOL a)
   go (PropVar (Eq a b)) v e     = PropVar (Eq (substArith a v e) (substArith b v e))
   go (PropVar (ForAll x y)) v e = PropVar (ForAll x (go y v e))
@@ -320,8 +317,7 @@ The function \texttt{substArith} is similar to \texttt{substPropCalc}, defined f
 \begin{minipage}{0.5\textwidth}
 \begin{lstlisting}
 getBoundVars :: Eq a => PropCalc (FOL a) -> [a]
-getBoundVars x = nub $ go x
-  where
+getBoundVars x = nub $ go x where
   go (PropVar (ForAll s e)) = s : go e
   go (PropVar (Exists s e)) = s : go e
   go _ = []
@@ -329,16 +325,13 @@ getBoundVars x = nub $ go x
 \end{minipage}
 \begin{minipage}{0.5\textwidth}
 \begin{lstlisting}
-getVars :: Eq a => PropCalc (FOL a) -> [a]
-getVars x = nub $ go x
-  where
-  go (PropVar (ForAll s e)) = go e
-  go (PropVar (Exists s e)) = go e
-  go (PropVar (Eq a b)) = getArithVars a ++ getArithVars b
-  go (Not x) = go x
-  go (And x y) = go x ++ go y
-  go (Or x y) = go x ++ go y
-  go (Imp x y) = go x ++ go y
+getArithVars :: Eq a => Arith a -> [a]
+getArithVars x = nub $ go x where
+  go (Var a) = [a]
+  go (S x) = go x
+  go (Plus a b) = go a ++ go b
+  go (Mult a b) = go a ++ go b
+  go _ = []
 \end{lstlisting}
 \end{minipage}
 
@@ -346,8 +339,7 @@ Finally, we are now able to implement the \textbf{Rule of Specification}:
 
 \begin{lstlisting}
 ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Proof (PropCalc (FOL a))
-ruleSpec (Proof f) v e = Proof $ go f v e
-  where
+ruleSpec (Proof f) v e = Proof $ go f v e where
   go :: Eq a => PropCalc (FOL a) -> a -> Arith a -> PropCalc (FOL a)
   go (PropVar (ForAll x y)) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = fromProof $ substPropCalc (Proof y) (Var x) e
   go x _ _ = x
@@ -379,8 +371,7 @@ Now, the \textbf{Rule of Existence} can be easily implemented:
 \begin{lstlisting}
 ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
 ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
-  Proof $ PropVar (Exists v (fromProof (go f paths)))
-  where
+  Proof $ PropVar (Exists v (fromProof (go f paths))) where
   go f ((pos, path1, path2):paths) =
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
     in go newProof paths
@@ -388,7 +379,7 @@ ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) pat
 ruleExistence x _ _ = x
 \end{lstlisting}
 
-Finally, here's the implementation for the \textbf{Rule of Induction}:
+Here's another example implementation, for the \textbf{Rule of Induction}:
 
 \begin{lstlisting}
 ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
@@ -405,7 +396,7 @@ ruleInduction x _ = Right x
 
 \subsection{Peano's axioms}
 
-Lastly, we now encode Peano's axioms as follows:
+Lastly, we now implement Peano's axioms as follows:
 
 \begin{lstlisting}
 -- Peano axiom 1: forall a, not (S a = 0)
@@ -424,8 +415,10 @@ axiom4 a = Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
 axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
 \end{lstlisting}
 
-\begin{minipage}{0.5\textwidth}
-An example proof that $\forall A, \forall B, A + S B = S(A + B)$:
+With a few example proofs:
+
+\begin{minipage}[t]{0.5\textwidth}
+$\forall A, \forall B, A + S B = S(A + B)$:
 
 \begin{lstlisting}
 -- lemma1 |- All A:All B:((A)+(S(B)))=(S((A)+(B)))
@@ -460,8 +453,8 @@ let step1 = axiom3 A B
     ruleGeneralize step7 C Nothing
 \end{lstlisting}
 \end{minipage}
-\begin{minipage}{0.5\textwidth}
-An example proof that $\forall D, \forall B, D + 1 = (D + 1) + 0$:
+\begin{minipage}[t]{0.5\textwidth}
+$\forall D, \forall B, D + 1 = (D + 1) + 0$:
 
 \begin{lstlisting}
 -- lemma2 |- All D:((D)+(S(0)))=((S(D))+(0))
@@ -724,24 +717,28 @@ eval ctx (CAssert b1 c b2) =
 
 Note that this language is not strongly normalizing; consider the evaluation of \texttt{CWhile BTrue CSkip}.
 
-As an example, a program that counts from 0 to $B$ can be represented with the pseudo-code:
+As an example, a program that counts from 0 to $B$ can be represented with the following codes:
 
+\begin{minipage}{0.3\textwidth}
 \begin{lstlisting}
 A := 0
 while ~(A = B)
   A := A + 1
 \end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.7\textwidth}
+\begin{lstlisting}
+countToB =
+  let l1 = CAssign A Z
+      l2 = CWhile (Not (PropVar $ Eq (Var A) (Var B))) l3
+      l3 = CAssign A (S (Var A))
+  in CSequence l1 l2
+\end{lstlisting}
+\end{minipage}
 
-Here's an implementation of it in our language:
+Here's an example evaluation and assertion checks:
 
 \begin{lstlisting}
-> :{
-| countToB =
-|   let l1 = CAssign A Z
-|       l2 = CWhile (Not (PropVar $ Eq (Var A) (Var B))) l3
-|       l3 = CAssign A (S (Var A))
-|   in CSequence l1 l2
-| :}
 > eval (M.fromList [(B, 3)]) countToB
 Right (fromList [(A,3),(B,3)])
 > let toArith x = if x == 0 then Z else S $ toArith (x - 1)
@@ -871,7 +868,7 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {<(A)=(S(S(0)))> /\ <(0)=(0)>}
 > let pre = ruleFantasy id $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
 |- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>>
-*Hoare> let post = ruleFantasy ruleSepL $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
+> let post = ruleFantasy ruleSepL $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
 |- <<(A)=(S(S(0)))> /\ <(0)=(0)>> -> <(A)=(S(S(0)))>
 > hoareConsequence pre tripleEg post
 Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
@@ -936,12 +933,7 @@ For the purposes of example, we start by considering the command:
 (If (~(A)=(0)) Then (;) Else (A := (A)+(S(0));));
 \end{lstlisting}
 
-Following the rule to construct a Hoare triple for this command, we can notice that the conditionals \texttt{B} and \texttt{P} are given in the code, so we have to construct the two triples:
-
-\begin{itemize}
-\item $\{A \neq 0 \land P\} \ ; \{Q\}$
-\item $\{\neg(A \neq 0) \land P\} A := A + 1; \{Q\}$
-\end{itemize}
+Following the rule to construct a Hoare triple for this command, we can notice that the conditionals \texttt{B} and \texttt{P} are given in the code, so we have to construct the two triples $\{A \neq 0 \land P\} \ ; \{Q\}$ and $\{\neg(A \neq 0) \land P\} A := A + 1; \{Q\}$.
 
 \begin{lstlisting}
 > let triple1 = hoareSkip (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
