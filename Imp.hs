@@ -53,8 +53,8 @@ eval ctx (CAssert b1 c b2) =
   then whenRight (eval ctx c)
        (\ctx' -> if beval ctx' b2
                   then Right ctx'
-                  else Left "Post-condition does not match!")
-  else Left "Pre-condition does not match!"
+                  else Left "Assert: Post-condition does not match!")
+  else Left "Assert: Pre-condition does not match!"
 
 assert :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Command a -> PropCalc (FOL a) -> Bool
 assert ctx boolPre cmd boolPost = let res = eval ctx cmd in go res
