@@ -792,8 +792,7 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 We represent the Hoare triple as a product of a \texttt{Command a} and the two conditions as \texttt{PropCalc (FOL a)}.
 
 \begin{lstlisting}
-data HoareTriple a =
-  HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
+data HoareTriple a = HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
 \end{lstlisting}
 
 As before, triples should not be constructed using \texttt{HoareTriple}, rather through the rules that we provide next.
@@ -832,9 +831,7 @@ Since the implementation relies on \texttt{PropCalc}, it's natural to re-use \te
 
 \subsubsection{H-Consequence}
 
-The consequence rule can be used to strengthen (make more specific) a precondition and/or weaken (make more generic) a postcondition in a Hoare triple.
-
-The implication in the consequence rule represents an "evaluation" from the previously defined logic. In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (another system) into a Hoare triple.
+The consequence rule can be used to strengthen (make more specific) a precondition and/or weaken (make more generic) a postcondition in a Hoare triple. The implication in the consequence rule represents an "evaluation" from the previously defined logic. In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (another system) into a Hoare triple.
 
 \begin{lstlisting}
 hoareConsequence :: Eq a => Proof (PropCalc (FOL a)) -> HoareTriple a -> Proof (PropCalc (FOL a)) -> Either String (HoareTriple a)
@@ -842,8 +839,6 @@ hoareConsequence (Proof (Imp p1 p2)) (HoareTriple p2' c q2) (Proof (Imp q2' q1))
   | p2 == p2' && q2 == q2' = Right $ HoareTriple p1 c q1
 hoareConsequence _ _ _ = Left "hoareConsequence: Cannot construct proof"
 \end{lstlisting}
-
-As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms.
 
 For example, considering the \texttt{hoareAssignment} example we saw earlier, we can weaken its postcondition:
 
@@ -955,14 +950,14 @@ hoareWhile _ = Left "hoareWhile: Cannot construct proof"
 
 The implementation for constructing the rule is straightforward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
 
-Similarly as we did with the H-Conditional rule, and for the purposes of example, consider the following command:
+Again, for the purposes of example, consider the following command:
 
 \begin{lstlisting}
 > CWhile (PropVar $ Eq Z Z) CSkip
 (While ((0)=(0)) Do {;});
 \end{lstlisting}
 
-In this case, \texttt{B} is \texttt{(PropVar \$ Eq Z Z)} and \texttt{C} is \texttt{CSkip} - thus, we must provide the Hoare triple $\{0=0 \land P\} ; \{P\}$:
+Similarly as we did in the example for the H-Conditional rule, we get that \texttt{B} is \texttt{(PropVar \$ Eq Z Z)} and \texttt{C} is \texttt{CSkip}.
 
 \begin{lstlisting}
 > let c = hoareSkip (PropVar $ Eq Z Z)
@@ -975,7 +970,7 @@ In this case, \texttt{B} is \texttt{(PropVar \$ Eq Z Z)} and \texttt{C} is \text
 Right {<(0)=(0)> /\ <(0)=(0)>} ; {(0)=(0)}
 \end{lstlisting}
 
-Now we can deduce the following, which states that from infinite loop, follows anything (contradiction):
+Now we can deduce a triple which states that from an infinite loop, anything follows (contradiction); our implementation does not support proving total correctness (termination).
 
 \begin{lstlisting}
 > whenRight (hoareConsequence preConseq c postConseq) hoareWhile
