@@ -51,9 +51,9 @@ Nowadays, imperative programming languages run the world, to list a few popular 
 
 Since a programmer has to specify the exact "how", it is easy to make a programming error. In addition, given the popularity of these programming languages, there are many bugs in software applications that are programmed in them. This motivates for a way to formally verify certain properties about programs written in these languages. Hoare logic is one way to mechanically reason about computer programs.
 
-We start by providing the implementation of the systems for manipulating logic and numbers. Further, we provide an implementation of an imperative language that will allow us to evaluate computer programs. We also provide an implementation of Hoare's logic, that will allow us to reason about computer programs, rather than evaluating them. The implementation of the imperative language will rely on logic for evaluating boolean expressions, while the implementation of Hoare's logic will rely on the number-theoretical system for proofs. Our implementation of Hoare's logic will be bottom-up, in the sense that we build the proofs from the ground up, in contrast to e.g. programming languages such as Dafny\cite{b1}, that build proofs from top to bottom. That is, in Dafny, the user provides a proposition and Dafny will derive the proof, automatically, using the automated theorem prover Z3\cite{b2}.
+We start by providing the implementation of the systems for manipulating logic and numbers. Further, we provide an implementation of an imperative language that will allow us to evaluate computer programs. We then provide an implementation of Hoare's logic, that will allow us to reason about computer programs, rather than evaluating them. The implementation of the imperative language will rely on logic for evaluating boolean expressions, while the implementation of Hoare's logic will rely on the number-theoretical system for proofs. Our implementation of Hoare's logic will be bottom-up, in the sense that we build the proofs from the ground up, in contrast to e.g. programming languages such as Dafny\cite{b1}, that build proofs from top to bottom. That is, in Dafny, the user provides a proposition and Dafny will derive the proof, automatically, using the automated theorem prover Z3\cite{b2}.
 
-The programming language that we implement already has an implementation in Coq\cite{b3}. However, implementing a language in Haskell is more concerned about playing at the value level (and to some extent at the type level), whereas in a dependently typed language the focus is at the type level. Specifically for Hoare's logic, in Haskell we cannot use any of the meta language's constructs to do mathematical proofs, so we have to take care of these algorithms ourselves.
+Hoare logic that we implement already has an implementation in Coq\cite{b3}. However, implementing a logic in Haskell is more concerned about playing at the value level (and to some extent at the type level), whereas in a dependently typed language the focus is at the type level. More specifically, in Haskell we cannot use any of the meta language's constructs to do mathematical proofs, so we have to take care of these algorithms ourselves.
 
 Haskell is not a strongly normalizing language, which means that not every evaluation necessarily terminates. However, in dependently typed languages, such as Coq\cite{b4}, the evaluation of proof terms (e.g. the type checker) is strongly normalizing, and this is what allows us to express mathematical proofs.
 
@@ -65,17 +65,16 @@ In this section, we provide an implementation of Propositional calculus, as desc
 
 \subsection{Syntax}
 
-The syntax of the formal system expressed in BNF (Backus-Naur form) is:
+The syntax of the formal system expressed in BNF (Backus-Naur form) and in Haskell is:
 
+\begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
-prop   ::= bterm | bterm brelop bterm | aterm arelop aterm | unop bterm
-bterm  ::= P | Q | R
+prop   ::= bvar | prop brelop prop | unop prop
+bvar   ::= P | Q | R
 unop   ::= "!"
 brelop ::= "&&" | "||" | "->"
 \end{lstlisting}
-
-The same syntax can be represented with the following Haskell code:
-
+\end{minipage}
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
 data PropCalc =
@@ -86,7 +85,9 @@ data PropCalc =
   | Imp PropCalc PropCalc
 \end{lstlisting}
 \end{minipage}
-\begin{minipage}{0.49\textwidth}
+
+We will use the following, more generic implementation - instead of using specific variables, we rely on polymorphic types. This will allow us to later embed this system easily in other systems.
+
 \begin{lstlisting}
 data PropCalc a =
   PropVar a
@@ -95,14 +96,8 @@ data PropCalc a =
   | Or (PropCalc a) (PropCalc a)
   | Imp (PropCalc a) (PropCalc a)
 \end{lstlisting}
-\end{minipage}
 
-We will use the more generic implementation on the right - instead of using specific variables, we rely on polymorphic types. This will allow us to later embed this system easily in other systems. With this data type, we have a way to represent some logical formulas, e.g. $A \land B$:
-
-\begin{lstlisting}
-> And (PropVar P) (PropVar Q)
-<P> /\ <Q>
-\end{lstlisting}
+We now have a way to represent some logical formulas, e.g. $A \land B$ is \texttt{And (PropVar P) (PropVar Q)}.
 
 We also need a way to differentiate between well-formed formulas and theorems since not all well-formed formulas are theorems. For that, we provide the \texttt{Proof} data type constructor:
 
@@ -123,14 +118,14 @@ Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \textt
 These rules come from GEB, and we list them here for posterity:
 
 \begin{itemize}
-\item \textbf{Fantasy Rule (Implication)}: If $x$ were a theorem, $y$ would be a theorem ($<x \to y>$).
+\item \textbf{Fantasy Rule (Implication-introduction)}: If $x$ were a theorem, $y$ would be a theorem ($<x \to y>$).
 \item \textbf{Carry Over Rule}: Inside a fantasy, any theorem from the "reality" a level higher can be brought in and used.
 \item \textbf{Contrapositive Rule}: $< x \to y>$ and $< \neg y \to \neg x>$ are interchangeable.
 \item \textbf{De Morgan's Rule}: $< \neg x \land \neg y>$ and $\neg<x \lor y>$ are interchangeable.
-\item \textbf{Double-Tilde Rule}: The string $\neg\neg$ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
-\item \textbf{Joining Rule}: If $x$ and $y$ are theorems, then $<x \land y>$ is a theorem.
-\item \textbf{Rule of Detachment}: If $x$ and $<x \to y>$ are both theorems, then $y$ is a theorem.
-\item \textbf{Sep Rule}: If $<x \land y>$ is a theorem, then both $x$ and $y$ are theorems.
+\item \textbf{Double-Tilde Rule (Double negation)}: The string $\neg\neg$ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed.
+\item \textbf{Joining Rule (And-introduction)}: If $x$ and $y$ are theorems, then $<x \land y>$ is a theorem.
+\item \textbf{Rule of Detachment (Implication-elimination)}: If $x$ and $<x \to y>$ are both theorems, then $y$ is a theorem.
+\item \textbf{Sep Rule (And-elimination)}: If $<x \land y>$ is a theorem, then both $x$ and $y$ are theorems.
 \item \textbf{Switcheroo Rule}: $<x \lor y>$ and $<\neg x \to y>$ are interchangeable.
 \end{itemize}
 
@@ -149,9 +144,7 @@ ruleSepR (Proof (And x y)) = Proof y
 ruleSepR x = x
 \end{lstlisting}
 
-That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else.
-
-Perhaps the most powerful rule is the implication-intro (fantasy), and its counter-part implication-elim (detachment):
+That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
 
 \begin{lstlisting}
 ruleFantasy :: (Proof (PropCalc a) -> Proof (PropCalc a)) -> PropCalc a -> Proof (PropCalc a)
@@ -162,7 +155,7 @@ ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
 ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 \end{lstlisting}
 
-Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms. That is because the hypothesis needn't be necessarily true, it only states that "In the case this hypothesis is true, that is true". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work.
+Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work.
 
 \begin{lstlisting}
 > ruleFantasy (\pq -> ruleJoin (ruleSepR pq) (ruleSepL pq)) (And (PropVar P) (PropVar Q))
@@ -209,7 +202,7 @@ applyPropRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x w
 
 Of course, going left or right doesn't make much sense for unary operators, so the implementation will just drill down in the \texttt{Not} operator if it finds either a left or a right. But, going left or right does make sense for binary operators - we drill on the left and the right argument respectively.
 
-Now we can use it to apply the double negation rule to $R$ within $P \land (Q \lor R)$ as follows:
+Now we can use this to apply \textbf{Double-Tilde Rule} to $R$ within $P \land (Q \lor R)$ as follows:
 
 \begin{lstlisting}
 > ruleFantasy (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro) (And (PropVar P) (Or (PropVar Q) (PropVar R)))
@@ -224,17 +217,15 @@ In this section we provide an implementation of a number-theoretical system, usi
 
 We start by introducing a language that can represent arithmetic expressions.
 
+\begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
 digit  ::= "0" | "1" | ... | "8" | "9"
-arith  ::= aterm | aterm relop aterm
-number ::= - digit* | digit*
+arith  ::= number | var | aterm relop aterm
+number ::= digit*
 relop  ::= "+" | "*"
-aterm  ::= arith | number | var
 var    ::= A | B | C ... | Y | Z
 \end{lstlisting}
-
-Followed by a direct translation to Haskell code:
-
+\end{minipage}
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
 data Arith =
@@ -244,7 +235,9 @@ data Arith =
   | Mult Arith Arith
 \end{lstlisting}
 \end{minipage}
-\begin{minipage}{0.49\textwidth}
+
+As we did with \texttt{PropCalc} earlier, we will use a more generic variant; getting rid of integers (implement our own zero and successor), and abstracting \texttt{Char}.
+
 \begin{lstlisting}
 data Arith a =
   Var a
@@ -253,14 +246,8 @@ data Arith a =
   | Plus (Arith a) (Arith a)
   | Mult (Arith a) (Arith a)
 \end{lstlisting}
-\end{minipage}
 
-As we did with \texttt{PropCalc} earlier, we will use the more generic variant on the right; getting rid off integers (implement our own zero and successor), and abstracting \texttt{Char}. Now we can represent things like $0 + 1 \cdot X$ as follows:
-
-\begin{lstlisting}
-> Plus Z (Mult (S Z) (Var X))
-(0)+((S(0))*(X))
-\end{lstlisting}
+For example, we can now represent $0 + 1 \cdot X$ as \texttt{Plus Z (Mult (S Z) (Var X))}.
 
 The next step is to implement the components from first-order logic (quantifiers and arithmetic equations).
 
@@ -279,7 +266,7 @@ data FOL a =
 \end{lstlisting}
 \end{minipage}
 
-Note how we just embedded \texttt{PropCalc} within the system. Similarly, as before, this constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
+Note how we embedded \texttt{PropCalc} within the system. Similarly, as before, this constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
 
 \subsection{Rules}
 
@@ -290,8 +277,8 @@ Again, these formation rules come from GEB, and we list them here for posterity:
 \item \textbf{Rule of Generalization}: Suppose $x$ is a theorem in which $u$, a variable, occurs free. Then $\forall u:x$ is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
 \item \textbf{Rule of Interchange}: Suppose $u$ is a variable. Then the strings $\forall u:\neg$ and $\neg \exists u:$ are interchangeable anywhere inside any theorem.
 \item \textbf{Rule of Existence}: Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable that otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
-\item \textbf{Rule of Symmetry}: If $r=s$ is a theorem, then so is $s=r$
-\item \textbf{Rule of Transitivity}: If $r=s$ and $s=t$ are theorems, then so is $r=t$
+\item \textbf{Rule of Symmetry}: If $r=s$ is a theorem, then so is $s=r$.
+\item \textbf{Rule of Transitivity}: If $r=s$ and $s=t$ are theorems, then so is $r=t$.
 \item \textbf{Rule Add S}: If $r=t$ is a theorem, then $Sr=St$ is a theorem.
 \item \textbf{Rule Drop S}: If $Sr=St$ is theorem, then $r=t$ is a theorem.
 \item \textbf{Rule of Induction}: Let $X[u]$ represent a well-formed formula in which the variable $u$ is free, and $X[x/u]$ represent the same string, with each appearance of $u$ replaced by $x$. If both $\forall u:X[u] \to X[Su/u]$ and $X[0/u]$ are theorems, then $\forall u:X[u]$ is also a theorem.
@@ -312,17 +299,10 @@ substPropCalc (Proof f) v e = Proof $ go f v e where
   go (Imp x y) v e              = Imp (go x v e) (go y v e)
 \end{lstlisting}
 
-The function \texttt{substArith} is similar to \texttt{substPropCalc}, defined for its own data type. Next, we provide the functions \texttt{getArithVars} and \texttt{getBoundVars} that retrieve all variables in an arithmetic expression and all bound variables in a formula respectively.
+The function \texttt{substArith} is similar to \texttt{substPropCalc}, defined for its own data type.
 
-\begin{minipage}{0.49\textwidth}
-\begin{lstlisting}
-getBoundVars :: Eq a => PropCalc (FOL a) -> [a]
-getBoundVars x = nub $ go x where
-  go (PropVar (ForAll s e)) = s : go e
-  go (PropVar (Exists s e)) = s : go e
-  go _ = []
-\end{lstlisting}
-\end{minipage}
+Next, we provide the functions \texttt{getArithVars} and \texttt{getBoundVars} that retrieve all variables in an arithmetic expression and all bound variables in a formula respectively.
+
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
 getArithVars :: Eq a => Arith a -> [a]
@@ -331,6 +311,15 @@ getArithVars x = nub $ go x where
   go (S x) = go x
   go (Plus a b) = go a ++ go b
   go (Mult a b) = go a ++ go b
+  go _ = []
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}{0.49\textwidth}
+\begin{lstlisting}
+getBoundVars :: Eq a => PropCalc (FOL a) -> [a]
+getBoundVars x = nub $ go x where
+  go (PropVar (ForAll s e)) = s : go e
+  go (PropVar (Exists s e)) = s : go e
   go _ = []
 \end{lstlisting}
 \end{minipage}
@@ -356,17 +345,19 @@ ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `not
 ruleGeneralize x _ _ = x
 \end{lstlisting}
 
-Another interesting rule is the existence rule; we can't simply substitute everything as we did within \texttt{ruleSpec}; we need to allow for one, or multiple terms replacement.
+The third argument represents the premise within a fantasy if any - this is the Restriction part of the rule.
+
+Another interesting rule is \textbf{Rule of Existence}; we can't simply substitute everything as we did within \texttt{ruleSpec}; we need to allow replacement for zero, one, or multiple terms.
 
 We're given the following:
 
 \begin{itemize}
 \item \texttt{applyFOLRule} and \texttt{applyArithRule}, both of which are similar to \texttt{applyPropRule}.
 \item \texttt{applyFOLArithRule} which is a combination of \texttt{applyFOLRule} and \texttt{applyArithRule}, which takes a list of paths and then applies the rule to all of them.
-\item \texttt{getTerm} - similar to \texttt{applyArithRule}, except that it returns a term instead of applying a rule to it. This function is used to check that each term is equivalent to others before applying the rule.
+\item \texttt{getTerm} - similar to \texttt{applyArithRule}, except that it returns a term instead of applying any function to it. This function is used to check that we're replacing the one and the same term in the formula.
 \end{itemize}
 
-Now, the \textbf{Rule of Existence} can be easily implemented:
+Now, the \textbf{Rule of Existence} can be implemented as follows:
 
 \begin{lstlisting}
 ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
@@ -374,7 +365,7 @@ ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) pat
   Proof $ PropVar (Exists v (fromProof (go f paths))) where
   go f ((pos, path1, path2):paths) =
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
-    in go newProof paths
+    in go newProof paths -- all terms are equal, recursively apply replacement
   go x _ = x
 ruleExistence x _ _ = x
 \end{lstlisting}
@@ -494,8 +485,6 @@ let theorem1 = ruleInduction lemma2 lemma1
 
 \subsection{Arithmetic and boolean expressions}
 
-We provide the syntax, evaluation rules, and the implementation in Haskell of a simple imperative language.
-
 To start with, we add support for variables by introducing the notion of a context; one implementation in Haskell is simply a mapping from characters to numbers.
 
 \begin{minipage}{0.49\textwidth}
@@ -545,8 +534,6 @@ We list the evaluation rules for arithmetic expressions:
 
 The arrow symbol $\underset{ctx}{\to}$ in the rules represents the actual evaluation of arithmetic expressions under context $ctx$.
 
-Follows the implementation of these rules in Haskell:
-
 \begin{lstlisting}
 aeval :: (Ord a, Eq a) => Context a -> Arith a -> Integer
 aeval ctx (Var v)        = ctx M.! v -- element may not exist
@@ -590,15 +577,13 @@ Finally, the evaluation rules for boolean expressions:
 \]
 \hfill
 \[
-\AxiomC{$b_1 \underset{ctx}{\Rightarrow} \neg b_1' , b_2 \underset{ctx}{\Rightarrow} b_2'$}
+\AxiomC{$b_1 \underset{ctx}{\Rightarrow} b_1' , b_2 \underset{ctx}{\Rightarrow} b_2'$}
 \RightLabel{(B-Eval-Imp)}
-\UnaryInfC{$\texttt{Imp} \ b_1 \ b_2 \underset{ctx}{\Rightarrow} b_1' \lor b_2'$}
+\UnaryInfC{$\texttt{Imp} \ b_1 \ b_2 \underset{ctx}{\Rightarrow} \neg b_1' \lor b_2'$}
 \DisplayProof
 \]
 
 Similarly, the double right arrow symbol $\underset{ctx}{\Rightarrow}$ in the rules represents the actual evaluation of boolean expressions under context $ctx$.
-
-We provide the implementation of these rules in Haskell:
 
 \begin{lstlisting}
 beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Bool
@@ -626,7 +611,7 @@ Note that we ignore quantifiers in this implementation because we only rely on p
 
 \subsection{Commands}
 
-We proceed with providing the syntax, evaluation rules, and the implementation in Haskell of an imperative language.
+We proceed with providing the syntax, evaluation rules, and their implementation in Haskell.
 
 \begin{lstlisting}
 data Command a =
@@ -759,7 +744,7 @@ Assert {B=5} countToB {A=5}: Left "Pre-condition does not match!"
 
 \section{Hoare logic}
 
-In the previous chapter, we implemented assertions (\texttt{CAssert}) at the run-time (\texttt{eval}) level. The biggest disadvantage of that is we have to do a full evaluation to deduce some facts about programs; considering the assertion example of the \texttt{countToB} program, it has to actually evaluate the program to assert something. This motivates the need for an additional evaluation strategy that will allow us to deduce facts about programs without doing a full evaluation.
+In the previous section, we implemented assertions (\texttt{CAssert}) at the run-time (\texttt{eval}) level. The biggest disadvantage of that is we have to do a full evaluation to deduce some facts about programs; considering the assertion example of the \texttt{countToB} program, it has to actually evaluate the program to assert something. This motivates the need for an additional evaluation strategy that will allow us to deduce facts about programs without doing a full evaluation.
 
 Some programming languages, like Python, don't have a compile step and the \texttt{eval} function we provided is kind of equivalent to evaluating programs in Python. But some programming languages do have a compile step, like C or Haskell, and this compilation step can be beneficial in that it can do additional different checks, e.g., type checks. That's what we'll do here - implement a "compile"-time check (just another evaluation strategy) using some of the rules in Hoare's logic, and this check can be used to check the validity of a program, before fully evaluating it.
 
@@ -804,14 +789,14 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 
 \subsection{Implementation}
 
-We represent the Hoare triple as a product of a command, a precondition (\texttt{(PropCalc (FOL a))}), and a postcondition (\texttt{(PropCalc (FOL a))}).
+We represent the Hoare triple as a product of a \texttt{Command a} and the two conditions as \texttt{PropCalc (FOL a)}.
 
 \begin{lstlisting}
 data HoareTriple a =
   HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
 \end{lstlisting}
 
-Similarly, as before, triples should not be constructed with \texttt{HoareTriple}, rather through the functions/rules that we provide next.
+As before, triples should not be constructed using \texttt{HoareTriple}, rather through the rules that we provide next.
 
 \subsubsection{H-Skip}
 
@@ -860,7 +845,7 @@ hoareConsequence _ _ _ = Left "hoareConsequence: Cannot construct proof"
 
 As with \texttt{eval}, the \texttt{Either} data type is used to distinguish between provable and not provable terms.
 
-For example, considering the \texttt{hoareAssignment} example we saw earlier, we can modify its postcondition (weaken) as follows:
+For example, considering the \texttt{hoareAssignment} example we saw earlier, we can weaken its postcondition:
 
 \begin{lstlisting}
 > let tripleEg = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
@@ -873,7 +858,7 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
 \end{lstlisting}
 
-For another example, here's how we can modify the precondition (strengthen):
+For another example, we can strengthen the precondition:
 
 \begin{lstlisting}
 > let tripleEg = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
@@ -900,17 +885,17 @@ hoareSequence _ _ = Left "hoareSequence: Cannot construct proof"
 Several commands can be chained as follows:
 
 \begin{lstlisting}
-> let c1 = hoareAssignment B (S Z) (And (PropVar $ Eq (Var B) (S Z)) (PropVar $ Eq (Var A) (Var A)))
-{<(S(0))=(S(0))> /\ <(A)=(A)>} B := S(0); {<(B)=(S(0))> /\ <(A)=(A)>}
-> let c2 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var B) (S Z)) (PropVar $ Eq (Var C) (Var A)))
-{<(B)=(S(0))> /\ <(A)=(A)>} C := A; {<(B)=(S(0))> /\ <(C)=(A)>}
+> let c1 = hoareAssignment B Z (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var A) (Var A)))
+{<(0)=(0)> /\ <(A)=(A)>} B := 0; {<(B)=(0)> /\ <(A)=(A)>}
+> let c2 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var C) (Var A)))
+{<(B)=(0)> /\ <(A)=(A)>} C := A; {<(B)=(0)> /\ <(C)=(A)>}
 > hoareSequence c1 c2
-Right {<(S(0))=(S(0))> /\ <(A)=(A)>} B := S(0); C := A; {<(B)=(S(0))> /\ <(C)=(A)>}
+Right {<(0)=(0)> /\ <(A)=(A)>} B := 0; C := A; {<(B)=(0)> /\ <(C)=(A)>}
 \end{lstlisting}
 
 \subsubsection{H-Conditional}
 
-We provide an implementation for the Hoare conditional rule.
+The Hoare conditional rule can be implemented as follows:
 
 \begin{lstlisting}
 hoareConditional :: Eq a => HoareTriple a -> HoareTriple a -> Either String (HoareTriple a)
@@ -957,7 +942,7 @@ Right {(0)=(0)} (If ((A)=(0)) Then (A := S(A);) Else (;)); {<~(A)=(0)> /\ <(0)=(
 
 \subsubsection{H-While}
 
-In this part, we provide the implementation of the last and most important and complex rule.
+In this part, we provide the implementation of the last, most important, and complex rule.
 
 \begin{lstlisting}
 hoareWhile :: Eq a => HoareTriple a -> Either String (HoareTriple a)
@@ -969,6 +954,33 @@ hoareWhile _ = Left "hoareWhile: Cannot construct proof"
 \end{lstlisting}
 
 The implementation for constructing the rule is straightforward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
+
+Similarly as we did with the H-Conditional rule, and for the purposes of example, consider the following command:
+
+\begin{lstlisting}
+> CWhile (PropVar $ Eq Z Z) CSkip
+(While ((0)=(0)) Do {;});
+\end{lstlisting}
+
+In this case, \texttt{B} is \texttt{(PropVar \$ Eq Z Z)} and \texttt{C} is \texttt{CSkip} - thus, we must provide the Hoare triple $\{0=0 \land P\} ; \{P\}$:
+
+\begin{lstlisting}
+> let c = hoareSkip (PropVar $ Eq Z Z)
+{(0)=(0)} ; {(0)=(0)}
+> let preConseq = ruleFantasy ruleSepR (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z))
+|- <<(0)=(0)> /\ <(0)=(0)>> -> <(0)=(0)>
+> let postConseq = ruleFantasy id (PropVar $ Eq Z Z)
+|- <(0)=(0)> -> <(0)=(0)>
+> hoareConsequence preConseq c postConseq
+Right {<(0)=(0)> /\ <(0)=(0)>} ; {(0)=(0)}
+\end{lstlisting}
+
+Now we can deduce the following, which states that from infinite loop, follows anything (contradiction):
+
+\begin{lstlisting}
+> whenRight (hoareConsequence preConseq c postConseq) hoareWhile
+Right {(0)=(0)} (While ((0)=(0)) Do {;}); {<~(0)=(0)> /\ <(0)=(0)>}
+\end{lstlisting}
 
 \subsection{A complete proof example}
 
@@ -1009,10 +1021,8 @@ To start with, we consider the following code:
 {Exists C:((S(A))+(C))=(B)} A := S(A); {Exists C:((A)+(C))=(B)}
 \end{lstlisting}
 
-The resulting triple is close, but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We will apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
+The resulting triple is close but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We will apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
 $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
-
-We now have the following:
 
 \begin{lstlisting}
 preConseq  = ???
