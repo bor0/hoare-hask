@@ -86,7 +86,7 @@ data PropCalc =
 \end{lstlisting}
 \end{minipage}
 
-We will use the following, more generic implementation - instead of using specific variables, we rely on polymorphic types. This will allow us to later embed this system easily in other systems.
+We will use the following, more generic implementation - instead of using specific variables, we rely on polymorphic types. This allows for an easy embedding of the system in other systems.
 
 \begin{lstlisting}
 data PropCalc a =
@@ -97,7 +97,7 @@ data PropCalc a =
   | Imp (PropCalc a) (PropCalc a)
 \end{lstlisting}
 
-We now have a way to represent some logical formulas, e.g. $A \land B$ is \texttt{And (PropVar P) (PropVar Q)}.
+We now have a way to represent some logical formulas, e.g. $A \land B$ as \texttt{And (PropVar P) (PropVar Q)}.
 
 We also need a way to differentiate between well-formed formulas and theorems since not all well-formed formulas are theorems. For that, we provide the \texttt{Proof} data type constructor:
 
@@ -111,7 +111,7 @@ fromProof :: Proof a -> a
 fromProof (Proof a) = a
 \end{lstlisting}
 
-Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \texttt{And (PropVar P) (PropVar Q)}. This constructor must not be used directly; proofs should only be constructed given the rules, which we provide next.
+Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \texttt{And (PropVar P) (PropVar Q)}. However, the constructor mustn't be used directly; proofs should only be constructed given the rules that we provide next.
 
 \subsection{Rules}
 
@@ -129,7 +129,7 @@ These rules come from GEB, and we list them here for posterity:
 \item \textbf{Switcheroo Rule}: $<x \lor y>$ and $<\neg x \to y>$ are interchangeable.
 \end{itemize}
 
-For example, here's how we can implement \textbf{Sep Rule} and \textbf{Joining Rule} in Haskell:
+For example, here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule} in Haskell:
 
 \begin{lstlisting}
 ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> Proof (PropCalc a)
@@ -155,7 +155,7 @@ ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
 ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 \end{lstlisting}
 
-Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work.
+Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box.
 
 \begin{lstlisting}
 > ruleFantasy (\pq -> ruleJoin (ruleSepR pq) (ruleSepL pq)) (And (PropVar P) (PropVar Q))
@@ -164,7 +164,7 @@ Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in oth
 
 For the other rule, we use \texttt{Either} to distinguish between provable and unprovable terms.
 
-Here's another example implementation for the \textbf{Double-Tilde Rule}:
+Here's another example implementation for \textbf{Double-Tilde Rule}:
 
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
@@ -324,7 +324,7 @@ getBoundVars x = nub $ go x where
 \end{lstlisting}
 \end{minipage}
 
-Finally, we are now able to implement the \textbf{Rule of Specification}:
+We are now able to implement \textbf{Rule of Specification}:
 
 \begin{lstlisting}
 ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Proof (PropCalc (FOL a))
@@ -334,7 +334,7 @@ ruleSpec (Proof f) v e = Proof $ go f v e where
   go x _ _ = x
 \end{lstlisting}
 
-We can also implement the \textbf{Rule of Generalization} as follows:
+We can also implement \textbf{Rule of Generalization} as follows:
 
 \begin{lstlisting}
 ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a))
@@ -345,9 +345,9 @@ ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `not
 ruleGeneralize x _ _ = x
 \end{lstlisting}
 
-The third argument represents the premise within a fantasy if any - this is the Restriction part of the rule.
+The third argument represents the premise (if any) within a fantasy - this is the Restriction part of the rule.
 
-Another interesting rule is \textbf{Rule of Existence}; we can't simply substitute everything as we did within \texttt{ruleSpec}; we need to allow replacement for zero, one, or multiple terms.
+Another interesting rule is \textbf{Rule of Existence}; we can't simply substitute everything as we did with \texttt{ruleSpec}; we need to allow replacement of zero, one, or multiple terms.
 
 We're given the following:
 
@@ -357,7 +357,7 @@ We're given the following:
 \item \texttt{getTerm} - similar to \texttt{applyArithRule}, except that it returns a term instead of applying any function to it. This function is used to check that we're replacing the one and the same term in the formula.
 \end{itemize}
 
-Now, the \textbf{Rule of Existence} can be implemented as follows:
+Now, \textbf{Rule of Existence} can be implemented as follows:
 
 \begin{lstlisting}
 ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
@@ -370,7 +370,7 @@ ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) pat
 ruleExistence x _ _ = x
 \end{lstlisting}
 
-Here's another example implementation, for the \textbf{Rule of Induction}:
+Here's another example implementation for \textbf{Rule of Induction}:
 
 \begin{lstlisting}
 ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
@@ -387,7 +387,7 @@ ruleInduction x _ = Right x
 
 \subsection{Peano's axioms}
 
-Lastly, we now implement Peano's axioms as follows:
+Finally, we now encode Peano's axioms as follows:
 
 \begin{lstlisting}
 -- Peano axiom 1: forall a, not (S a = 0)
@@ -510,7 +510,7 @@ We list the evaluation rules for arithmetic expressions:
 \quad
 \AxiomC{}
 \RightLabel{(A-Eval-Z)}
-\UnaryInfC{$Z \underset{ctx}{\to} 0$}
+\UnaryInfC{$\texttt{Z} \underset{ctx}{\to} 0$}
 \DisplayProof
 \quad
 \AxiomC{$a \underset{ctx}{\to} a'$}
@@ -543,7 +543,7 @@ aeval ctx (Plus a1 a2)   = aeval ctx a1 + aeval ctx a2
 aeval ctx (Mult a1 a2)   = aeval ctx a1 * aeval ctx a2
 \end{lstlisting}
 
-Finally, the evaluation rules for boolean expressions:
+Further, we provide the evaluation rules for boolean expressions:
 
 \[
 \AxiomC{$a_1 \underset{ctx}{\to} a_1' , a_2 \underset{ctx}{\to} a_2'$}
@@ -688,7 +688,7 @@ We show the evaluation rules for this language:
 
 The map arrow symbol $\underset{ctx}{\mapsto}$ in the rules represents the actual evaluation of a command under context $ctx$.
 
-In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, similarly as before we will rely on the \texttt{Either} data type to distinguish between provable and not provable terms.
+In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, similarly as before we rely on the \texttt{Either} data type to distinguish between provable and not provable terms.
 
 \begin{lstlisting}
 eval :: (Ord a, Eq a) => Context a -> Command a -> Either String (Context a)
@@ -758,7 +758,7 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 \quad
 \AxiomC{}
 \RightLabel{(H-Assign)}
-\UnaryInfC{$\{P[E/x]\}x:=E\{P\}$}
+\UnaryInfC{$\{P[E/x]\}x \texttt{ := } E\{P\}$}
 \DisplayProof
 \]
 \hfill
@@ -815,7 +815,7 @@ Note that the rule accepts well-formed formulas instead of proven ones, as the v
 
 \subsubsection{H-Assign}
 
-Let \texttt{Q[E/V]} denote the expression \texttt{Q} in which each free occurrence of \texttt{V} is replaced with \texttt{E}. Given an assignment command \texttt{V := E}, it should produce the triple where the precondition is \texttt{Q[E/V]} and the postcondition is \texttt{Q}, for any \texttt{Q}.
+Let $Q[E/V]$ denote the expression $Q$ in which each free occurrence of $V$ is replaced with $E$. Given an assignment command $V \texttt{ := } E$, it should produce the triple where the precondition is $Q[E/V]$ and the postcondition is $Q$.
 
 \begin{lstlisting}
 hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> HoareTriple a
@@ -877,7 +877,7 @@ hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
 hoareSequence _ _ = Left "hoareSequence: Cannot construct proof"
 \end{lstlisting}
 
-Several commands can be chained as follows:
+Several commands can be sequenced as follows:
 
 \begin{lstlisting}
 > let c1 = hoareAssignment B Z (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var A) (Var A)))
@@ -908,7 +908,7 @@ For the purposes of example, we start by considering the command:
 (If (~(A)=(0)) Then (;) Else (A := (A)+(S(0));));
 \end{lstlisting}
 
-Following the rule to construct a Hoare triple for this command, we can notice that the conditionals \texttt{B} and \texttt{P} are given in the code, so we have to construct the two triples $\{A \neq 0 \land P\} \ ; \{Q\}$ and $\{\neg(A \neq 0) \land P\} A := 1 + A; \{Q\}$.
+Following the rule to construct a Hoare triple for this command, we can notice that the conditionals $B$ and $P$ are given in the code, so we have to construct the two triples $\{A \neq 0 \land P\} \texttt{ ; } \{Q\}$ and $\{\neg(A \neq 0) \land P\} A \texttt{ := } 1 + A; \{Q\}$.
 
 \begin{lstlisting}
 > let triple1 = hoareSkip (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
@@ -957,7 +957,7 @@ Again, for the purposes of example, consider the following command:
 (While ((0)=(0)) Do {;});
 \end{lstlisting}
 
-Similarly as we did in the example for the H-Conditional rule, we get that \texttt{B} is \texttt{(PropVar \$ Eq Z Z)} and \texttt{C} is \texttt{CSkip}.
+Similarly as we did in the example for the H-Conditional rule, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
 
 \begin{lstlisting}
 > let c = hoareSkip (PropVar $ Eq Z Z)
@@ -979,11 +979,11 @@ Right {(0)=(0)} (While ((0)=(0)) Do {;}); {<~(0)=(0)> /\ <(0)=(0)>}
 
 \subsection{A complete proof example}
 
-In this section, we will provide a proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution.
+In this section, we provide a proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution.
 
 According to the program definition, we need to apply the rules in order: H-Sequence, H-Assign, H-While.
 
-Looking at the while rule, we can determine the values of \texttt{B} and \texttt{S} based on the command; meanwhile, one valid invariant would be $\exists C: A + C = B$.
+Looking at the while rule, we can determine the values of $B$ and $S$ based on the command; meanwhile, one valid invariant would be $\exists C: A + C = B$.
 
 \[
 \AxiomC{$\{\neg(A = B) \land \exists C: A + C = B\}A\texttt{ := }S(A) \ \{\exists C: A + C = B\}$}
@@ -997,7 +997,7 @@ Further, since this rule has to be followed in sequence with the assignment rule
 \[
 \AxiomC{}
 \RightLabel{(step2)}
-\UnaryInfC{$\{\exists C: 0 + C = B\}\texttt{ A := 0 } \{\exists C: A + C = B\}$}
+\UnaryInfC{$\{\exists C: 0 + C = B\} A \texttt{ := } 0 \{\exists C: A + C = B\}$}
 \DisplayProof
 \]
 
@@ -1016,7 +1016,7 @@ To start with, we consider the following code:
 {Exists C:((S(A))+(C))=(B)} A := S(A); {Exists C:((A)+(C))=(B)}
 \end{lstlisting}
 
-The resulting triple is close but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We will apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
+The resulting triple is close but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
 $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 
 \begin{lstlisting}
@@ -1056,7 +1056,7 @@ $$\{\exists C: 0+C=B\} A \texttt{ := } 0 \texttt{; while } \neg(A = B) \texttt{ 
 
 Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We achieved this by providing an implementation of Hoare logic.
 
-The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious; it feels like working with assembly/machine code. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. Further, the underlying number-theoretical system uses Peano's axioms which are limited to natural numbers - we could extend it to integers for better expressibility. Lastly, we could increase the expressiveness of the logical system by allowing additional definitions to be incorporated.
+The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious; it feels like working with assembly/machine code. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. Further, the underlying number-theoretical system uses Peano's axioms which are limited to natural numbers - we could extend it to integers for better expressibility. Finally, we could increase the expressiveness of the logical system by allowing additional definitions to be incorporated.
 
 Even though the mathematical formulas for these systems look simple, implementing them is a different matter. Looking at the implementation, we see how complex these systems can get. Nevertheless, this introductory paper may serve as a good starting point toward building systems of similar nature.
 
