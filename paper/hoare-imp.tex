@@ -51,7 +51,7 @@ Nowadays, imperative programming languages run the world, to list a few popular 
 
 Since a programmer has to specify the exact "how", it is easy to make a programming error. In addition, given the popularity of these programming languages, there are many bugs in software applications that are programmed in them. This motivates for a way to formally verify certain properties about programs written in these languages. Hoare logic is one way to mechanically reason about computer programs.
 
-We start by providing the implementation of the systems for manipulating logic and numbers. Further, we provide an implementation of an imperative language that will allow us to evaluate computer programs. We then provide an implementation of Hoare's logic, that will allow us to reason about computer programs, rather than evaluating them. The implementation of the imperative language will rely on logic for evaluating boolean expressions, while the implementation of Hoare's logic will rely on the number-theoretical system for proofs. Our implementation of Hoare's logic will be bottom-up, in the sense that we build the proofs from the ground up, in contrast to e.g. programming languages such as Dafny\cite{b1}, that build proofs from top to bottom. That is, in Dafny, the user provides a proposition and Dafny will derive the proof, automatically, using the automated theorem prover Z3\cite{b2}.
+We will first provide an implementation of systems for manipulating logic and numbers. Further, we will provide an implementation of an imperative language that will allow us to evaluate computer programs, and then, an implementation of Hoare's logic, that will allow us to reason about computer programs, rather than evaluating them. The implementation of the imperative language will rely on logic for evaluating boolean expressions, while the implementation of Hoare's logic will rely on the number-theoretical system for proofs. Our implementation of Hoare's logic will be bottom-up, in the sense that we build the proofs from the ground up, in contrast to e.g. programming languages such as Dafny\cite{b1}, that build proofs from top to bottom. That is, in Dafny, the user provides a proposition and Dafny will derive the proof, automatically, using the automated theorem prover Z3\cite{b2}.
 
 Hoare logic that we implement already has an implementation in Coq\cite{b3}. However, implementing a logic in Haskell is more concerned about playing at the value level (and to some extent at the type level), whereas in a dependently typed language the focus is at the type level. More specifically, in Haskell we cannot use any of the meta language's constructs to do mathematical proofs, so we have to take care of these algorithms ourselves.
 
@@ -822,7 +822,7 @@ hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> HoareTriple a
 hoareAssignment v e q = HoareTriple (fromProof (substPropCalc (Proof q) (Var v) e)) (CAssign v e) q
 \end{lstlisting}
 
-Since the implementation relies on \texttt{PropCalc}, it's natural to re-use \texttt{substPropCalc}. Example deduction:
+$Q$ exactly corresponds to \texttt{substPropCalc} - the implementation relies on \texttt{PropCalc}. Example deduction:
 
 \begin{lstlisting}
 > hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
@@ -831,7 +831,7 @@ Since the implementation relies on \texttt{PropCalc}, it's natural to re-use \te
 
 \subsubsection{H-Consequence}
 
-The consequence rule can be used to strengthen (make more specific) a precondition and/or weaken (make more generic) a postcondition in a Hoare triple. The implication in the consequence rule represents an "evaluation" from the previously defined logic. In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (another system) into a Hoare triple.
+The consequence rule can be used to strengthen (make more specific) a precondition and/or weaken (make more generic) a postcondition in a Hoare triple. The implication in the consequence rule represents an "evaluation" from the previously defined logic. In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (another system) into the same Hoare triple.
 
 \begin{lstlisting}
 hoareConsequence :: Eq a => Proof (PropCalc (FOL a)) -> HoareTriple a -> Proof (PropCalc (FOL a)) -> Either String (HoareTriple a)
@@ -957,7 +957,7 @@ Again, for the purposes of example, consider the following command:
 (While ((0)=(0)) Do {;});
 \end{lstlisting}
 
-Similarly as we did in the example for the H-Conditional rule, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
+Similarly as we did in the example for the H-Conditional rule, following the rule to construct a Hoare triple for this command, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
 
 \begin{lstlisting}
 > let c = hoareSkip (PropVar $ Eq Z Z)
@@ -1054,11 +1054,11 @@ $$\{\exists C: 0+C=B\} A \texttt{ := } 0 \texttt{; while } \neg(A = B) \texttt{ 
 
 \section{Conclusion and future work}
 
-Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies at the compile-time level may be different from those at the run-time level. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We achieved this by providing an implementation of Hoare logic.
+Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies are different at various computation levels. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We achieved this by providing an implementation of Hoare logic.
 
-The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious; it feels like working with assembly/machine code. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. Further, the underlying number-theoretical system uses Peano's axioms which are limited to natural numbers - we could extend it to integers for better expressibility. Finally, we could increase the expressiveness of the logical system by allowing additional definitions to be incorporated.
+The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious; it feels like working with assembly/machine code. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. Further, the underlying number-theoretical system uses Peano's axioms which are limited to natural numbers - we could extend it to integers for better expressibility. Finally, we could increase the expressiveness of the logical system by allowing user definitions to be added.
 
-Even though the mathematical formulas for these systems look simple, implementing them is a different matter. Looking at the implementation, we see how complex these systems can get. Nevertheless, this introductory paper may serve as a good starting point toward building systems of similar nature.
+Even though the mathematical formulas for these systems look simple, implementing them is a different matter. Looking at the implementation, we see how complex the implementation details of these systems can get. Nevertheless, this introductory paper may serve as a good starting point toward building systems of similar nature.
 
 \section{Conflict of interest}
 
