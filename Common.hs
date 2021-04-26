@@ -1,5 +1,9 @@
 module Common where
 
+rightProof :: Either String p -> p
+rightProof (Right x) = x
+rightProof (Left x) = error x
+
 whenRight :: Either a t -> (t -> Either a b) -> Either a b
 whenRight (Right x) f = f x
 whenRight (Left x)  _ = Left x
@@ -25,3 +29,5 @@ fromProof (Proof a) = a
 
 instance Show a => Show (Proof a) where
   show (Proof a) = "|- " ++ show a
+
+data Vars = A | B | C | D deriving (Eq, Ord, Show)
