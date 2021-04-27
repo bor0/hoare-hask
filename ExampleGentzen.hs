@@ -114,8 +114,8 @@ s3prf9 = ruleFantasy
                          in ruleJoin premise' prfC
           prfnotCtoBottom'  = applyPropRule [GoRight,GoRight] ruleDoubleTildeIntro prfnotCtoBottom
           prfnotCtoBottom'' = applyPropRule [GoRight] ruleDeMorgan prfnotCtoBottom'
-          prfBottomtoC      = ruleContra prfnotCtoBottom''
-      in rightProof $ ruleDetachment prfCornotC prfBottomtoC
+          prfCornotCtoC      = ruleContra prfnotCtoBottom''
+      in rightProof $ ruleDetachment prfCornotC prfCornotCtoC
 
 -- | Session 4
 -- |- <<x> /\ <~x>> -> <y>
