@@ -95,7 +95,7 @@ s3prf7 = ruleFantasy id (Or (And (PropVar $ Var A) (PropVar $ Var B)) (PropVar $
 s3prf8 x y = ruleFantasy (\prf -> let prfAorB = ruleSepL prf in let prfNotA = ruleSepR prf in rightProof $ ruleDetachment prfNotA (ruleSwitcheroo prfAorB)) (And (Or x y) (Not x))
 s3prf8' = s3prf8 (PropVar $ Var A) (PropVar $ Var B)
 
--- |- <<<A> \/ <B>> /\ <<<A> -> <C>> /\ <<B> -> <C>>>> -> <C>
+-- |- <<<A> \/ <B>> /\ <<<A> -> <C>> /\ <<B> -> <C>>>> -> <C> (props int-e@freenode)
 s3prf9 = ruleFantasy
   f
   (And (Or (PropVar $ Var A) (PropVar $ Var B)) (And (Imp (PropVar $ Var A) (PropVar $ Var C)) (Imp (PropVar $ Var B) (PropVar $ Var C))))
