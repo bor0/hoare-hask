@@ -89,14 +89,8 @@ s3prf5 = s3lemma2 (PropVar $ Var A) (And (PropVar (Var B)) (PropVar (Var C)))
 s3prf6 x y = ruleFantasy (\prfAB -> let prfA = fromRight $ ruleSepL prfAB in fromRight $ ruleDetachment prfA (s3lemma1 x y)) (And x y)
 s3prf6' = s3prf6 (PropVar $ Var A) (PropVar $ Var B)
 
-s3prf7 = ruleFantasy id (Or (And (PropVar $ Var A) (PropVar $ Var B)) (PropVar $ Var C))
-
--- |- <<<A> \/ <B>> /\ <~A>> -> <B>
-s3prf8 x y = ruleFantasy (\prf -> let prfAorB = fromRight $ ruleSepL prf in let prfNotA = fromRight $ ruleSepR prf in fromRight $ ruleDetachment prfNotA (fromRight $ ruleSwitcheroo prfAorB)) (And (Or x y) (Not x))
-s3prf8' = s3prf8 (PropVar $ Var A) (PropVar $ Var B)
-
 -- |- <<<A> \/ <B>> /\ <<<A> -> <C>> /\ <<B> -> <C>>>> -> <C> (props int-e@freenode)
-s3prf9 = ruleFantasy
+s3prf7 = ruleFantasy
   f
   (And (Or (PropVar $ Var A) (PropVar $ Var B)) (And (Imp (PropVar $ Var A) (PropVar $ Var C)) (Imp (PropVar $ Var B) (PropVar $ Var C))))
     where
@@ -116,6 +110,10 @@ s3prf9 = ruleFantasy
           prfnotCtoBottom'' = applyPropRule [GoRight] (fromRight . ruleDeMorgan) prfnotCtoBottom'
           prfCornotCtoC     = fromRight $ ruleContra prfnotCtoBottom''
       in fromRight $ ruleDetachment prfCornotC prfCornotCtoC
+
+-- |- <<<A> \/ <B>> /\ <~A>> -> <B>
+s3prf8 x y = ruleFantasy (\prf -> let prfAorB = fromRight $ ruleSepL prf in let prfNotA = fromRight $ ruleSepR prf in fromRight $ ruleDetachment prfNotA (fromRight $ ruleSwitcheroo prfAorB)) (And (Or x y) (Not x))
+s3prf8' = s3prf8 (PropVar $ Var A) (PropVar $ Var B)
 
 -- | Session 4
 -- |- <<x> /\ <~x>> -> <y>
