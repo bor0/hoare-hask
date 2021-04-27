@@ -10,14 +10,14 @@ data PropCalc a =
   | And (PropCalc a) (PropCalc a)
   | Or (PropCalc a) (PropCalc a)
   | Imp (PropCalc a) (PropCalc a)
-  deriving (Eq)
+  deriving (Eq, Show)
 
-instance Show a => Show (PropCalc a) where
-  show (PropVar a) = show a
-  show (Not a)     = "~" ++ show a
-  show (And a b)   = "<" ++ show a ++ "> /\\ <" ++ show b ++ ">"
-  show (Or a b)    = "<" ++ show a ++ "> \\/ <" ++ show b ++ ">"
-  show (Imp a b)   = "<" ++ show a ++ "> -> <" ++ show b ++ ">"
+instance Pretty a => Pretty (PropCalc a) where
+  pr (PropVar a) = pr a
+  pr (Not a)     = "~" ++ pr a
+  pr (And a b)   = "<" ++ pr a ++ "> /\\ <" ++ pr b ++ ">"
+  pr (Or a b)    = "<" ++ pr a ++ "> \\/ <" ++ pr b ++ ">"
+  pr (Imp a b)   = "<" ++ pr a ++ "> -> <" ++ pr b ++ ">"
 
 {- Helper functions -}
 

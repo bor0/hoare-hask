@@ -7,9 +7,10 @@ import TNT
 
 data HoareTriple a =
   HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
+  deriving (Show)
 
-instance Show a => Show (HoareTriple a) where
-  show (HoareTriple pre c post) = "{" ++ show pre ++ "} " ++ show c ++ " {" ++ show post ++ "}"
+instance Pretty a => Pretty (HoareTriple a) where
+  pr (HoareTriple pre c post) = "{" ++ pr pre ++ "} " ++ pr c ++ " {" ++ pr post ++ "}"
 
 -- | Hoare skip rule
 hoareSkip :: PropCalc (FOL a) -> HoareTriple a

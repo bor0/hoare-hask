@@ -32,25 +32,25 @@ data Arith a =
   | S (Arith a)
   | Plus (Arith a) (Arith a)
   | Mult (Arith a) (Arith a)
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data FOL a =
   Eq (Arith a) (Arith a)
   | ForAll a (PropCalc (FOL a))
   | Exists a (PropCalc (FOL a))
-  deriving (Eq)
+  deriving (Eq, Show)
 
-instance Show a => Show (Arith a) where
-  show (Var a)     = show a
-  show Z           = "0"
-  show (S a)       = "S(" ++ show a ++ ")"
-  show (Plus a b)  = "(" ++ show a ++ ")+(" ++ show b ++ ")"
-  show (Mult a b)  = "(" ++ show a ++ ")*(" ++ show b ++ ")"
+instance Pretty a => Pretty (Arith a) where
+  pr (Var a)     = pr a
+  pr Z           = "0"
+  pr (S a)       = "S(" ++ pr a ++ ")"
+  pr (Plus a b)  = "(" ++ pr a ++ ")+(" ++ pr b ++ ")"
+  pr (Mult a b)  = "(" ++ pr a ++ ")*(" ++ pr b ++ ")"
 
-instance Show a => Show (FOL a) where
-  show (Eq a b) = "(" ++ show a ++ ")=(" ++ show b ++ ")"
-  show (ForAll x y) = "All " ++ show x ++ ":" ++ show y
-  show (Exists x y) = "Exists " ++ show x ++ ":" ++ show y
+instance Pretty a => Pretty (FOL a) where
+  pr (Eq a b) = "(" ++ pr a ++ ")=(" ++ pr b ++ ")"
+  pr (ForAll x y) = "All " ++ pr x ++ ":" ++ pr y
+  pr (Exists x y) = "Exists " ++ pr x ++ ":" ++ pr y
 
 {- Helper functions -}
 

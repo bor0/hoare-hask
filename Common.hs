@@ -17,17 +17,23 @@ allSame []  = False
 allSame [x] = True
 allSame xs  = all (== head xs) (tail xs)
 
-data Pos = GoLeft | GoRight deriving (Eq)
+data Pos = GoLeft | GoRight deriving (Eq, Show)
 
 type Path = [Pos]
 
 -- Don't use this constructor directly. You should only construct proofs given the rules.
-newtype Proof a = Proof a deriving (Eq)
+newtype Proof a = Proof a deriving (Eq, Show)
 
 fromProof :: Proof a -> a
 fromProof (Proof a) = a
 
-instance Show a => Show (Proof a) where
-  show (Proof a) = "|- " ++ show a
-
 data Vars = A | B | C | D deriving (Eq, Ord, Show)
+
+class Pretty a where
+  pr :: a -> String
+
+instance Pretty a => Pretty (Proof a) where
+  pr (Proof a) = "|- " ++ pr a
+
+instance Pretty Vars where
+  pr = show

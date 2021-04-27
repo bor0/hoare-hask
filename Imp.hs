@@ -12,14 +12,15 @@ data Command a =
   | CIfElse (PropCalc (FOL a)) (Command a) (Command a)
   | CWhile (PropCalc (FOL a)) (Command a)
   | CAssert (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
+  deriving (Show)
 
-instance Show a => Show (Command a) where
-  show CSkip           = ";"
-  show (CAssign x y)   = show x ++ " := " ++ show y ++ ";"
-  show (CSequence x y) = show x ++ " " ++ show y
-  show (CIfElse x y z) = "(If (" ++ show x ++ ") Then (" ++ show y ++ ") Else (" ++ show z ++ "));"
-  show (CWhile x y)    = "(While (" ++ show x ++ ") Do {" ++ show y ++ "});"
-  show (CAssert x y z) = "(Assert {" ++ show x ++ "} (" ++ show y ++ ") {" ++ show z ++ "});"
+instance Pretty a => Pretty (Command a) where
+  pr CSkip           = ";"
+  pr (CAssign x y)   = pr x ++ " := " ++ pr y ++ ";"
+  pr (CSequence x y) = pr x ++ " " ++ pr y
+  pr (CIfElse x y z) = "(If (" ++ pr x ++ ") Then (" ++ pr y ++ ") Else (" ++ pr z ++ "));"
+  pr (CWhile x y)    = "(While (" ++ pr x ++ ") Do {" ++ pr y ++ "});"
+  pr (CAssert x y z) = "(Assert {" ++ pr x ++ "} (" ++ pr y ++ ") {" ++ pr z ++ "});"
 
 type Context a = M.Map a Integer
 
