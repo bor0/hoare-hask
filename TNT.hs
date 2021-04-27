@@ -20,9 +20,10 @@ module TNT
   , ruleTransitivity
   ) where
 
-import Data.List ((\\), nub)
 import Common
+import Data.List ((\\), nub)
 import Gentzen
+import PrettyPrinter
 
 {- Data defs -}
 
@@ -204,71 +205,68 @@ axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Va
 
 -- | Rule of Specification
 -- Suppose u is a variable which occurs inside the string x. If the string ∀u:x is a theorem, then so is x, and so are any strings made from x by replacing u, wherever it occurs, by one and the same term. (Restriction: The term which replaces u must not contain any variable that is quantified in x.)
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Proof (PropCalc (FOL a))
-ruleSpec (Proof f) v e = Proof $ go f v e
-  where
-  go :: Eq a => PropCalc (FOL a) -> a -> Arith a -> PropCalc (FOL a)
-  go (PropVar (ForAll x y)) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = fromProof $ substPropCalc (Proof y) (Var x) e
-  go x _ _ = x
+ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+ruleSpec (Proof (PropVar (ForAll x y))) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
+ruleSpec _ _ _ = Left "ruleSpec: Cannot construct proof"
 
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a))
+ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Either String (Proof (PropCalc (FOL a)))
 ruleGeneralize (Proof f) v Nothing | v `notElem` getBoundVars f
-  = Proof $ PropVar (ForAll v f)
+  = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `notElem` getFreeVars (fromProof premise) -- fantasy vars
-  = Proof $ PropVar (ForAll v f)
-ruleGeneralize x _ _ = x
+  = Right $ Proof $ PropVar (ForAll v f)
+ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 
 -- | Rule of Interchange
 -- Suppose u is a variable. Then the strings ∀u:~ and ~∃u: are interchangeable anywhere inside any theorem.
-ruleInterchangeL :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-ruleInterchangeL (Proof (PropVar (ForAll x (Not y)))) = Proof $ Not (PropVar $ Exists x y)
-ruleInterchangeL x = x
+ruleInterchangeL :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleInterchangeL (Proof (PropVar (ForAll x (Not y)))) = Right $ Proof $ Not (PropVar $ Exists x y)
+ruleInterchangeL _ = Left "ruleInterchangeL: Cannot construct proof"
 
 -- | Rule of Interchange
 -- Suppose u is a variable. Then the strings ∀u:~ and ~∃u: are interchangeable anywhere inside any theorem.
-ruleInterchangeR :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-ruleInterchangeR (Proof (Not (PropVar (Exists x y)))) = Proof $ PropVar (ForAll x (Not y))
-ruleInterchangeR x = x
+ruleInterchangeR :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleInterchangeR (Proof (Not (PropVar (Exists x y)))) = Right $ Proof $ PropVar (ForAll x (Not y))
+ruleInterchangeR _ = Left "ruleInterchangeR: Cannot construct proof"
 
 -- | Rule of Existence
 -- Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable which otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
+ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Either String (Proof (PropCalc (FOL a)))
 ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
-  Proof $ PropVar (Exists v (fromProof (go f paths)))
+  Right $ Proof $ PropVar (Exists v (fromProof (go f paths)))
   where
   go f ((pos, path1, path2):paths) =
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
     in go newProof paths
   go x _ = x
 ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
-  Proof $ PropVar (Exists v (fromProof f))
-ruleExistence x _ _ = x
+  Right $ Proof $ PropVar (Exists v (fromProof f))
+ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 
 -- | Rule of Symmetry
 -- If r=s is a theorem, then so is s=r
-ruleSymmetry :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-ruleSymmetry (Proof (PropVar (Eq a b))) = Proof $ PropVar (Eq b a)
-ruleSymmetry x = x
+ruleSymmetry :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleSymmetry (Proof (PropVar (Eq a b))) = Right $ Proof $ PropVar (Eq b a)
+ruleSymmetry _ = Left "ruleSymmetry: Cannot construct proof"
 
 -- | Rule of Transitivity
 -- If r=s and s=t are theorems, then so is r=t
-ruleTransitivity :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-ruleTransitivity (Proof (PropVar (Eq a b))) (Proof (PropVar (Eq b' c))) | b == b' = Proof $ PropVar (Eq a c)
-ruleTransitivity x _ = x
+ruleTransitivity :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleTransitivity (Proof (PropVar (Eq a b))) (Proof (PropVar (Eq b' c))) | b == b' = Right $ Proof $ PropVar (Eq a c)
+ruleTransitivity _ _ = Left "ruleTransitivity: Cannot construct proof"
 
 -- | Rule Add S
 -- If r=t is a theorem, then Sr=St is a theorem.
-ruleAddS :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-ruleAddS (Proof (PropVar (Eq a b))) = Proof $ PropVar (Eq (S a) (S b))
-ruleAddS x = x
+ruleAddS :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleAddS (Proof (PropVar (Eq a b))) = Right $ Proof $ PropVar (Eq (S a) (S b))
+ruleAddS _ = Left "ruleAddS: Cannot construct proof"
 
 -- | Rule Drop S
 -- If Sr=St is theorem, then r=t is a theorem.
-ruleDropS :: Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-ruleDropS (Proof (PropVar (Eq (S a) (S b)))) = Proof $ PropVar (Eq a b)
-ruleDropS x = x
+ruleDropS :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleDropS (Proof (PropVar (Eq (S a) (S b)))) = Right $ Proof $ PropVar (Eq a b)
+ruleDropS _ = Left "ruleDropS: Cannot construct proof"
 
 -- | Rule of Induction
 -- Let X{u} represent a well-formed formula in which the variable u is free, and X{x/u} represent the same string, with each appearance of u replaced by x. If both ∀u:<X{u}⊃X{Su/u}> and X{0/u} are theorems, then ∀u:X{u} is also a theorem.
@@ -281,4 +279,4 @@ ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   if base' == base && conc == Proof z
   then Right $ Proof $ PropVar (ForAll x y)
   else Left "ruleInduction: Cannot construct proof"
-ruleInduction x _ = Right x
+ruleInduction _ _ = Left "ruleInduction: Cannot construct proof"

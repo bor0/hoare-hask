@@ -102,10 +102,7 @@ We now have a way to represent some logical formulas, e.g. $A \land B$ as \textt
 We also need a way to differentiate between well-formed formulas and theorems since not all well-formed formulas are theorems. For that, we provide the \texttt{Proof} data type constructor:
 
 \begin{lstlisting}
-newtype Proof a = Proof a deriving (Eq)
-
-instance (Show a) => Show (Proof a) where
-  show (Proof a) = "|- " ++ show a
+newtype Proof a = Proof a
 
 fromProof :: Proof a -> a
 fromProof (Proof a) = a
@@ -129,19 +126,19 @@ These rules come from GEB, and we list them here for posterity:
 \item \textbf{Switcheroo Rule}: $<x \lor y>$ and $<\neg x \to y>$ are interchangeable.
 \end{itemize}
 
-For example, here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule} in Haskell:
+For example, here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule} in Haskell, where we use \texttt{Either} to distinguish between provable and unprovable terms:
 
 \begin{lstlisting}
 ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> Proof (PropCalc a)
 ruleJoin (Proof x) (Proof y) = Proof $ And x y
 
-ruleSepL :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleSepL (Proof (And x y)) = Proof x
-ruleSepL x = x
+ruleSepL :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSepL (Proof (And x y)) = Right $ Proof x
+ruleSepL _ = Left "ruleSepL: Cannot construct proof"
 
-ruleSepR :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleSepR (Proof (And x y)) = Proof y
-ruleSepR x = x
+ruleSepR :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSepR (Proof (And x y)) = Right $ Proof y
+ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 \end{lstlisting}
 
 That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
@@ -158,11 +155,9 @@ ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box.
 
 \begin{lstlisting}
-> ruleFantasy (\pq -> ruleJoin (ruleSepR pq) (ruleSepL pq)) (And (PropVar P) (PropVar Q))
-|- <<P> /\ <Q>> -> <<Q> /\ <P>>
+> putStrLn $ pr $ ruleFantasy (\pq -> ruleJoin (fromRight $ ruleSepR pq) (fromRight $ ruleSepL pq)) (And (PropVar A) (PropVar B))
+|- <<A> /\ <B>> -> <<B> /\ <A>>
 \end{lstlisting}
-
-For the other rule, we use \texttt{Either} to distinguish between provable and unprovable terms.
 
 Here's another example implementation for \textbf{Double-Tilde Rule}:
 
@@ -174,9 +169,9 @@ ruleDoubleTildeIntro (Proof x) = Proof $ Not (Not x)
 \end{minipage}
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
-ruleDoubleTildeElim :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleDoubleTildeElim (Proof (Not (Not x))) = Proof x
-ruleDoubleTildeElim x = x
+ruleDoubleTildeElim :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDoubleTildeElim (Proof (Not (Not x))) = Right $ Proof x
+ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 \end{lstlisting}
 \end{minipage}
 
@@ -205,8 +200,8 @@ Of course, going left or right doesn't make much sense for unary operators, so t
 Now we can use this to apply \textbf{Double-Tilde Rule} to $R$ within $P \land (Q \lor R)$ as follows:
 
 \begin{lstlisting}
-> ruleFantasy (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro) (And (PropVar P) (Or (PropVar Q) (PropVar R)))
-|- <<P> /\ <<Q> \/ <R>>> -> <<P> /\ <<Q> \/ <~~R>>>
+> putStrLn $ pr $ ruleFantasy (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro) (And (PropVar A) (Or (PropVar B) (PropVar C)))
+|- <<A> /\ <<B> \/ <C>>> -> <<A> /\ <<B> \/ <~~C>>>
 \end{lstlisting}
 
 \section{Number theory}
@@ -327,22 +322,20 @@ getBoundVars x = nub $ go x where
 We are now able to implement \textbf{Rule of Specification}:
 
 \begin{lstlisting}
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Proof (PropCalc (FOL a))
-ruleSpec (Proof f) v e = Proof $ go f v e where
-  go :: Eq a => PropCalc (FOL a) -> a -> Arith a -> PropCalc (FOL a)
-  go (PropVar (ForAll x y)) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = fromProof $ substPropCalc (Proof y) (Var x) e
-  go x _ _ = x
+ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+ruleSpec (Proof (PropVar (ForAll x y))) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
+ruleSpec _ _ _ = Left "ruleSpec: Cannot construct proof"
 \end{lstlisting}
 
 We can also implement \textbf{Rule of Generalization} as follows:
 
 \begin{lstlisting}
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a))
+ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Either String (Proof (PropCalc (FOL a)))
 ruleGeneralize (Proof f) v Nothing | v `notElem` getBoundVars f
-  = Proof $ PropVar (ForAll v f)
+  = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `notElem` getFreeVars (fromProof premise) -- fantasy vars
-  = Proof $ PropVar (ForAll v f)
-ruleGeneralize x _ _ = x
+  = Right $ Proof $ PropVar (ForAll v f)
+ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 \end{lstlisting}
 
 The third argument represents the premise (if any) within a fantasy - this is the Restriction part of the rule.
@@ -360,14 +353,17 @@ We're given the following:
 Now, \textbf{Rule of Existence} can be implemented as follows:
 
 \begin{lstlisting}
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a))
+ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Either String (Proof (PropCalc (FOL a)))
 ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
-  Proof $ PropVar (Exists v (fromProof (go f paths))) where
+  Right $ Proof $ PropVar (Exists v (fromProof (go f paths)))
+  where
   go f ((pos, path1, path2):paths) =
     let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
-    in go newProof paths -- all terms are equal, recursively apply replacement
+    in go newProof paths
   go x _ = x
-ruleExistence x _ _ = x
+ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
+  Right $ Proof $ PropVar (Exists v (fromProof f))
+ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 \end{lstlisting}
 
 Here's another example implementation for \textbf{Rule of Induction}:
@@ -382,7 +378,7 @@ ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   if base' == base && conc == Proof z
   then Right $ Proof $ PropVar (ForAll x y)
   else Left "ruleInduction: Cannot construct proof"
-ruleInduction x _ = Right x
+ruleInduction _ _ = Left "ruleInduction: Cannot construct proof"
 \end{lstlisting}
 
 \subsection{Peano's axioms}
@@ -415,32 +411,32 @@ $\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
 -- lemma1 |- All A:All B:((A)+(S(B)))=(S((A)+(B)))
 let step1 = axiom3 A B
     -- |- All B:((D)+(S(B)))=(S((D)+(B)))
-    step2 = ruleSpec step1 A (Var D)
+    step2 = fromRight $ ruleSpec step1 A (Var D)
     -- |- ((D)+(S(S(C))))=(S((D)+(S(C))))
-    step3 = ruleSpec step2 B (S (Var C))
+    step3 = fromRight $ ruleSpec step2 B (S (Var C))
     -- |- All B:((S(D))+(S(B)))=(S((S(D))+(B)))
-    step4 = ruleSpec step1 A (S (Var D))
+    step4 = fromRight $ ruleSpec step1 A (S (Var D))
     -- |- ((S(D))+(S(C)))=(S((S(D))+(C)))
-    step5 = ruleSpec step4 B (Var C)
+    step5 = fromRight $ ruleSpec step4 B (Var C)
     -- |- (S((S(D))+(C)))=((S(D))+(S(C)))
-    step6 = ruleSymmetry step5
+    step6 = fromRight $ ruleSymmetry step5
     -- All D:((D)+(S(C)))=((S(D))+(C))
     premise = PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))
     f premise =
      -- |- ((D)+(S(C)))=((S(D))+(C))
-     let step8 = ruleSpec premise D (Var D)
+     let step8 = fromRight $ ruleSpec premise D (Var D)
          -- |- (S((D)+(S(C))))=(S((S(D))+(C)))
-         step9 = ruleAddS step8
+         step9 = fromRight $ ruleAddS step8
          -- |- ((D)+(S(S(C))))=(S((S(D))+(C)))
-         step10 = ruleTransitivity step3 step9
+         step10 = fromRight $ ruleTransitivity step3 step9
          -- |- ((D)+(S(S(C))))=((S(D))+(S(C)))
-         step11 = ruleTransitivity step10 step6
+         step11 = fromRight $ ruleTransitivity step10 step6
          -- |- All D:((D)+(S(S(C))))=((S(D))+(S(C)))
-         in ruleGeneralize step11 D (Just premise)
+         in fromRight $ ruleGeneralize step11 D (Just premise)
     -- |- <All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
     step7 = ruleFantasy f premise in
     -- |- All C:<All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
-    ruleGeneralize step7 C Nothing
+    fromRight $ ruleGeneralize step7 C Nothing
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}[t]{0.49\textwidth}
@@ -450,34 +446,34 @@ $\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
 -- lemma2 |- All D:((D)+(S(0)))=((S(D))+(0))
 let step1 = axiom3 A B
     -- |- All B:((D)+(S(B)))=(S((D)+(B)))
-    step2 = ruleSpec step1 A (Var D)
+    step2 = fromRight $ ruleSpec step1 A (Var D)
     -- |- ((D)+(S(S(C))))=(S((D)+(S(C))))
-    step3 = ruleSpec step2 B (S (Var C))
+    step3 = fromRight $ ruleSpec step2 B (S (Var C))
     -- |- ((D)+(S(0)))=(S((D)+(0)))
-    step4 = ruleSpec step2 B Z
+    step4 = fromRight $ ruleSpec step2 B Z
     -- |- All A:((A)+(0))=(A)
     step5 = axiom2 A
     -- |- ((D)+(0))=(D)
-    step6 = ruleSpec step5 A (Var D)
+    step6 = fromRight $ ruleSpec step5 A (Var D)
     -- |- (S((D)+(0)))=(S(D))
-    step7 = ruleAddS step6
+    step7 = fromRight $ ruleAddS step6
     -- |- ((D)+(S(0)))=(S(D))
-    step8 = ruleTransitivity step4 step7
+    step8 = fromRight $ ruleTransitivity step4 step7
     -- |- ((S(D))+(0))=(S(D))
-    step9 = ruleSpec step5 A (S (Var D))
+    step9 = fromRight $ ruleSpec step5 A (S (Var D))
     -- |- (S(D))=((S(D))+(0))
-    step10 = ruleSymmetry step9
+    step10 = fromRight $ ruleSymmetry step9
     -- |- ((D)+(S(0)))=((S(D))+(0))
-    step11 = ruleTransitivity step8 step10 in
+    step11 = fromRight $ ruleTransitivity step8 step10 in
     -- |- All D:((D)+(S(0)))=((S(D))+(0))
-    ruleGeneralize step11 D Nothing
+    fromRight $ ruleGeneralize step11 D Nothing
 \end{lstlisting}
 
 $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:
 
 \begin{lstlisting}
 -- theorem1 Right |- All C:All D:((D)+(S(C)))=((S(D))+(C))
-let theorem1 = ruleInduction lemma2 lemma1
+let theorem1 = fromRight $ ruleInduction lemma2 lemma1
 \end{lstlisting}
 \end{minipage}
 
@@ -599,14 +595,14 @@ beval ctx (Imp b1 b2)            = not (beval ctx b1) || beval ctx b2
 Note that we ignore quantifiers in this implementation because we only rely on propositional logic and substitute variables based on the context.
 
 \begin{lstlisting}
-> let e = Plus (Var X) (S Z) in show e ++ " = " ++ show (aeval (M.fromList [(X, 5)]) e)
-(X)+(S(0)) = 6
-> let e = Plus (Var X) (S (S Z)) in show e ++ " = " ++ show (aeval (M.fromList [(X, 5)]) e)
-(X)+(S(S(0))) = 7
-> let e = PropVar $ Eq (Var X) (S Z) in show e ++ " = " ++ show (beval (M.fromList [(X, 5)]) e)
-"(X)=(S(0)) = False"
-> let e = PropVar $ Eq (Var X) (S (S (S (S (S Z))))) in show e ++ " = " ++ show (beval (M.fromList [(X, 5)]) e)
-(X)=(S(S(S(S(S(0)))))) = True
+> let e = Plus (Var A) (S Z) in putStrLn $ pr e ++ " = " ++ pr (aeval (M.fromList [(A, 5)]) e)
+(A)+(S(0)) = 6
+> let e = Plus (Var A) (S (S Z)) in putStrLn $ pr e ++ " = " ++ pr (aeval (M.fromList [(A, 5)]) e)
+(A)+(S(S(0))) = 7
+> let e = PropVar $ Eq (Var A) (S Z) in putStrLn $ pr e ++ " = " ++ pr (beval (M.fromList [(A, 5)]) e)
+(A)=(S(0)) = False
+> let e = PropVar $ Eq (Var A) (S (S (S (S (S Z))))) in putStrLn $ pr e ++ " = " ++ pr (beval (M.fromList [(A, 5)]) e)
+(A)=(S(S(S(S(S(0)))))) = True
 \end{lstlisting}
 
 \subsection{Commands}
@@ -736,9 +732,9 @@ Here's an example evaluation with assertion checks:
 > eval (M.fromList [(B, 3)]) countToB
 Right (fromList [(A,3),(B,3)])
 > let toArith x = if x == 0 then Z else S $ toArith (x - 1)
-> let e = CAssert (PropVar $ Eq (toArith 5) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
+> let e = CAssert (PropVar $ Eq (toArith 5) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in putStrLn $ "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
 Assert {B=5} countToB {A=5}: Right (fromList [(A,5),(B,5)])
-> let e = CAssert (PropVar $ Eq (toArith 4) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
+> let e = CAssert (PropVar $ Eq (toArith 4) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in putStrLn $ "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
 Assert {B=5} countToB {A=5}: Left "Pre-condition does not match!"
 \end{lstlisting}
 
@@ -809,7 +805,7 @@ hoareSkip q = HoareTriple q CSkip q
 Note that the rule accepts well-formed formulas instead of proven ones, as the validity of the precondition is not being checked; the triple merely states that assuming some precondition, a command produces some postcondition.
 
 \begin{lstlisting}
-> hoareSkip (PropVar (Eq (Var A) (S (S (S Z)))))
+> putStrLn $ pr $ hoareSkip (PropVar (Eq (Var A) (S (S (S Z)))))
 {(A)=(S(S(S(0))))} ; {(A)=(S(S(S(0))))}
 \end{lstlisting}
 
@@ -825,7 +821,7 @@ hoareAssignment v e q = HoareTriple (fromProof (substPropCalc (Proof q) (Var v) 
 $Q$ exactly corresponds to \texttt{substPropCalc} - the implementation relies on \texttt{PropCalc}. Example deduction:
 
 \begin{lstlisting}
-> hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
+> putStrLn $ pr $ hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
 {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {<(A)=(S(S(0)))> /\ <(0)=(0)>}
 \end{lstlisting}
 
@@ -847,10 +843,11 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {<(A)=(S(S(0)))> /\ <(0)=(0)>}
 > let pre = ruleFantasy id $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
 |- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>>
-> let post = ruleFantasy ruleSepL $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
+> let post = ruleFantasy (fromRight . ruleSepL) $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
 |- <<(A)=(S(S(0)))> /\ <(0)=(0)>> -> <(A)=(S(S(0)))>
 > hoareConsequence pre tripleEg post
-Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
+> putStrLn $ pr $ fromRight $ hoareConsequence pre tripleEg post
+{<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
 \end{lstlisting}
 
 For another example, we can strengthen the precondition:
@@ -858,12 +855,12 @@ For another example, we can strengthen the precondition:
 \begin{lstlisting}
 > let tripleEg = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
 {((B)+(S(0)))=(S(S(0)))} A := (B)+(S(0)); {(A)=(S(S(0)))}
-> let pre = ruleFantasy ruleSepL $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
+> let pre = ruleFantasy (fromRight . ruleSepL) $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
 |- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <((B)+(S(0)))=(S(S(0)))>
 > let post = ruleFantasy id $ PropVar (Eq (Var A) (S (S Z)))
 |- <(A)=(S(S(0)))> -> <(A)=(S(S(0)))>
-> hoareConsequence pre tripleEg post
-Right {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
+> putStrLn $ pr $ fromRight $ hoareConsequence pre tripleEg post
+{<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
 \end{lstlisting}
 
 \subsubsection{H-Sequence}
@@ -884,8 +881,8 @@ Several commands can be sequenced as follows:
 {<(0)=(0)> /\ <(A)=(A)>} B := 0; {<(B)=(0)> /\ <(A)=(A)>}
 > let c2 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var C) (Var A)))
 {<(B)=(0)> /\ <(A)=(A)>} C := A; {<(B)=(0)> /\ <(C)=(A)>}
-> hoareSequence c1 c2
-Right {<(0)=(0)> /\ <(A)=(A)>} B := 0; C := A; {<(B)=(0)> /\ <(C)=(A)>}
+> putStrLn $ pr $ fromRight $ hoareSequence c1 c2
+{<(0)=(0)> /\ <(A)=(A)>} B := 0; C := A; {<(B)=(0)> /\ <(C)=(A)>}
 \end{lstlisting}
 
 \subsubsection{H-Conditional}
@@ -904,7 +901,7 @@ hoareConditional _ _ = Left "hoareConditional: Cannot construct proof"
 For the purposes of example, we start by considering the command:
 
 \begin{lstlisting}
-> CIfElse (Not (PropVar $ Eq (Var A) Z)) CSkip (CAssign A (Plus (Var A) (S Z)))
+> putStrLn $ pr $ CIfElse (Not (PropVar $ Eq (Var A) Z)) CSkip (CAssign A (Plus (Var A) (S Z)))
 (If (~(A)=(0)) Then (;) Else (A := (A)+(S(0));));
 \end{lstlisting}
 
@@ -920,7 +917,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
-> let prf1 = ruleFantasy (\pq -> ruleJoin (ruleSpec (axiom1 A) A (Var A)) (ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let prf1 = ruleFantasy (\pq -> ruleJoin (fromRight $ ruleSpec (axiom1 A) A (Var A)) (fromRight $ ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- <<(A)=(0)> /\ <(0)=(0)>> -> <<~(S(A))=(0)> /\ <(0)=(0)>>
 > let prf2 = ruleFantasy id $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- <<~(A)=(0)> /\ <(0)=(0)>> -> <<~(A)=(0)> /\ <(0)=(0)>>
@@ -929,10 +926,10 @@ The next thing to do is to transform the precondition of the second triple to ma
 Given these two proofs, we can now transform the triple easily, and conclude our proof:
 
 \begin{lstlisting}
-> let triple3 = hoareConsequence prf1 triple2 prf2
+> let triple3 = fromRight $ hoareConsequence prf1 triple2 prf2
 Right {<(A)=(0)> /\ <(0)=(0)>} A := S(A); {<~(A)=(0)> /\ <(0)=(0)>}
-> whenRight triple3 (\triple3 -> hoareConditional triple3 triple1)
-Right {(0)=(0)} (If ((A)=(0)) Then (A := S(A);) Else (;)); {<~(A)=(0)> /\ <(0)=(0)>}
+> putStrLn $ pr $ fromRight $ hoareConditional triple3 triple1
+{(0)=(0)} (If ((A)=(0)) Then (A := S(A);) Else (;)); {<~(A)=(0)> /\ <(0)=(0)>}
 \end{lstlisting}
 
 \subsubsection{H-While}
@@ -953,7 +950,7 @@ The implementation for constructing the rule is straightforward, but the tricky 
 Again, for the purposes of example, consider the following command:
 
 \begin{lstlisting}
-> CWhile (PropVar $ Eq Z Z) CSkip
+> putStrLn $ pr (CWhile (PropVar $ Eq Z Z) CSkip :: Command Integer)
 (While ((0)=(0)) Do {;});
 \end{lstlisting}
 
@@ -962,19 +959,19 @@ Similarly as we did in the example for the H-Conditional rule, following the rul
 \begin{lstlisting}
 > let c = hoareSkip (PropVar $ Eq Z Z)
 {(0)=(0)} ; {(0)=(0)}
-> let preConseq = ruleFantasy ruleSepR (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z))
+> let pre = ruleFantasy (fromRight . ruleSepR) (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z))
 |- <<(0)=(0)> /\ <(0)=(0)>> -> <(0)=(0)>
-> let postConseq = ruleFantasy id (PropVar $ Eq Z Z)
+> let post = ruleFantasy id (PropVar $ Eq Z Z)
 |- <(0)=(0)> -> <(0)=(0)>
-> hoareConsequence preConseq c postConseq
-Right {<(0)=(0)> /\ <(0)=(0)>} ; {(0)=(0)}
+> putStrLn $ pr $ fromRight $ hoareConsequence pre c post
+{<(0)=(0)> /\ <(0)=(0)>} ; {(0)=(0)}
 \end{lstlisting}
 
 Now we can deduce a triple which states that from an infinite loop, anything follows (contradiction); our implementation does not support proving total correctness (termination).
 
 \begin{lstlisting}
-> whenRight (hoareConsequence preConseq c postConseq) hoareWhile
-Right {(0)=(0)} (While ((0)=(0)) Do {;}); {<~(0)=(0)> /\ <(0)=(0)>}
+> putStrLn $ pr $ fromRight $ hoareWhile $ fromRight $ hoareConsequence pre c post
+{(0)=(0)} (While ((0)=(0)) Do {;}); {<~(0)=(0)> /\ <(0)=(0)>}
 \end{lstlisting}
 
 \subsection{A complete proof example}
@@ -1004,9 +1001,9 @@ Further, since this rule has to be followed in sequence with the assignment rule
 The only thing remaining to prove is the hypothesis for the H-While rule, so we have the following code:
 
 \begin{lstlisting}
-step1 = whenRight step3 (\step3 -> hoareSequence step2 step3)
+step1 = fromRight $ hoareSequence step2 step3
 step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-step3 = whenRight ??? hoareWhile
+step3 = fromRight $ hoareWhile ???
 \end{lstlisting}
 
 To start with, we consider the following code:
@@ -1020,15 +1017,15 @@ The resulting triple is close but does not exactly match the hypothesis of step1
 $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 
 \begin{lstlisting}
-preConseq  = ???
-postConseq = ruleFantasy id (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-step4 = hoareConsequence preConseq step5 postConseq
+pre   = ???
+post  = ruleFantasy id (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+step4 = fromRight $ hoareConsequence pre step5 post
 \end{lstlisting}
 
 Here's the complete proof for the preconditional part:
 
 \begin{lstlisting}
-preConseq =
+pre =
   let premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
       f premise =
        -- |- ~~Exists C:((A)+(C))=(B)

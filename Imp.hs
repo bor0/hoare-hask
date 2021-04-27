@@ -2,6 +2,7 @@ module Imp where
 
 import Common
 import Gentzen
+import PrettyPrinter
 import TNT
 import qualified Data.Map as M
 

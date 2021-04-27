@@ -1,6 +1,7 @@
 module Gentzen where
 
 import Common
+import PrettyPrinter
 
 {- Data defs -}
 
@@ -46,15 +47,15 @@ ruleJoin (Proof x) (Proof y) = Proof $ And x y
 
 -- | Sep Rule
 -- If <x∧y> is a theorem, then both x and y are theorems.
-ruleSepL :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleSepL (Proof (And x y)) = Proof x
-ruleSepL x = x
+ruleSepL :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSepL (Proof (And x y)) = Right $ Proof x
+ruleSepL _ = Left "ruleSepL: Cannot construct proof"
 
 -- | Sep Rule
 -- If <x∧y> is a theorem, then both x and y are theorems.
-ruleSepR :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleSepR (Proof (And x y)) = Proof y
-ruleSepR x = x
+ruleSepR :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSepR (Proof (And x y)) = Right $ Proof y
+ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 
 -- | Double-Tilde Rule
 -- The string ~~ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
@@ -63,9 +64,9 @@ ruleDoubleTildeIntro (Proof x) = Proof $ Not (Not x)
 
 -- | Double-Tilde Rule
 -- The string ~~ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
-ruleDoubleTildeElim :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleDoubleTildeElim (Proof (Not (Not x))) = Proof x
-ruleDoubleTildeElim x = x
+ruleDoubleTildeElim :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDoubleTildeElim (Proof (Not (Not x))) = Right $ Proof x
+ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 
 -- | Fantasy Rule (Carry over)
 -- If x were a theorem, y would be a theorem.
@@ -83,21 +84,21 @@ ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 
 -- | Contrapositive Rule
 -- <x⊃y> and <~y⊃~x> are interchangeable.
-ruleContra :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleContra (Proof (Imp (Not y) (Not x))) = Proof $ Imp x y
-ruleContra (Proof (Imp x y)) = Proof $ Imp (Not y) (Not x)
-ruleContra x = x
+ruleContra :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleContra (Proof (Imp (Not y) (Not x))) = Right $ Proof $ Imp x y
+ruleContra (Proof (Imp x y)) = Right $ Proof $ Imp (Not y) (Not x)
+ruleContra _ = Left "ruleContra: Cannot construct proof"
 
 -- | De Morgan's Rule
 -- <~x∧~y> and ~<x∨y> are interchangeable.
-ruleDeMorgan :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleDeMorgan (Proof (And (Not x) (Not y))) = Proof $ Not (Or x y)
-ruleDeMorgan (Proof (Not (Or x y))) = Proof $ And (Not x) (Not y)
-ruleDeMorgan x = x
+ruleDeMorgan :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDeMorgan (Proof (And (Not x) (Not y))) = Right $ Proof $ Not (Or x y)
+ruleDeMorgan (Proof (Not (Or x y))) = Right $ Proof $ And (Not x) (Not y)
+ruleDeMorgan _ = Left "ruleDeMorgan: Cannot construct proof"
 
 -- | Switcheroo Rule
 -- <x∨y> and <~x⊃y> are interchangeable.
-ruleSwitcheroo :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleSwitcheroo (Proof (Or x y)) = Proof $ Imp (Not x) y
-ruleSwitcheroo (Proof (Imp (Not x) y)) = Proof $ Or x y
-ruleSwitcheroo x = x
+ruleSwitcheroo :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSwitcheroo (Proof (Or x y)) = Right $ Proof $ Imp (Not x) y
+ruleSwitcheroo (Proof (Imp (Not x) y)) = Right $ Proof $ Or x y
+ruleSwitcheroo _ = Left "ruleSwitcheroo: Cannot construct proof"
