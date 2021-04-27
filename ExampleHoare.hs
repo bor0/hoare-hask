@@ -1,13 +1,14 @@
 module ExampleHoare where
 
-import Imp
-import TNT
-import Gentzen
-import Hoare
 import Common
+import ExampleCommon
 import ExampleGentzen
 import ExampleTNT
-
+import Gentzen
+import Hoare
+import Imp
+import PrettyPrinter
+import TNT
 import qualified Data.Map as M
 
 -- Program definition

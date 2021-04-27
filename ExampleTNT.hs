@@ -1,8 +1,10 @@
 module ExampleTNT where
 
-import TNT
-import Gentzen
 import Common
+import ExampleCommon
+import Gentzen
+import PrettyPrinter
+import TNT
 
 -- |- All C:<All D:((D)+(S(C)))=((S(D))+(C))> -> <All D:((D)+(S(S(C))))=((S(D))+(S(C)))>
 lemma1 =

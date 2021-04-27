@@ -29,9 +29,3 @@ fromProof (Proof a) = a
 
 instance Pretty a => Pretty (Proof a) where
   pr (Proof a) = "|- " ++ pr a
-
-{- Example variables -}
-data Vars = A | B | C | D deriving (Eq, Ord, Show)
-
-instance Pretty Vars where
-  pr = show

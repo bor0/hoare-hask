@@ -1,8 +1,10 @@
 module ExampleGentzen where
 
-import TNT
-import Gentzen
 import Common
+import ExampleCommon
+import Gentzen
+import PrettyPrinter
+import TNT
 
 -- Helpers
 bottom x = And x (Not x)
