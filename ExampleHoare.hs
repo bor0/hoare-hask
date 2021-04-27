@@ -22,25 +22,22 @@ countToB =
 egEval = eval (M.fromList [(B, 3)]) countToB
 
 -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
-pre = 
-  let premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-      f premise =
-       -- |- ~~Exists C:((A)+(C))=(B)
-       let step1 = ruleDoubleTildeIntro (fromRight $ ruleSepR premise)
-           -- |- ~~((A)+(S(C)))=(B)
-           step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) C (S (Var C))) step1
-           -- |- ((A)+(S(C)))=(B)
-           step3 = fromRight $ ruleDoubleTildeElim step2
-           -- |- ((A)+(S(C)))=((S(A))+(C))
-           step4 = fromRight $ ruleSpec (fromRight $ ruleSpec theorem C (Var C)) D (Var A)
-           -- |- ((S(A))+(C))=((A)+(S(C)))
-           step5 = fromRight $ ruleSymmetry step4
-           -- |- ((S(A))+(C))=(B)
-           step6 = fromRight $ ruleTransitivity step5 step3
-           -- |- Exists C:((S(A))+(C))=(B)
-           in fromRight $ ruleExistence step6 C []
-     -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
-     in ruleFantasy f premise
+pre = ruleFantasy f premise where
+  premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+  -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
+  f premise = fromRight $ ruleExistence step6 C [] where
+    -- |- ~~Exists C:((A)+(C))=(B)
+    step1 = ruleDoubleTildeIntro (fromRight $ ruleSepR premise)
+    -- |- ~~((A)+(S(C)))=(B)
+    step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) C (S (Var C))) step1
+    -- |- ((A)+(S(C)))=(B)
+    step3 = fromRight $ ruleDoubleTildeElim step2
+    -- |- ((A)+(S(C)))=((S(A))+(C))
+    step4 = fromRight $ ruleSpec (fromRight $ ruleSpec theorem C (Var C)) D (Var A)
+    -- |- ((S(A))+(C))=((A)+(S(C)))
+    step5 = fromRight $ ruleSymmetry step4
+    -- |- ((S(A))+(C))=(B)
+    step6 = fromRight $ ruleTransitivity step5 step3
 
 -- |- <Exists C:((A)+(C))=(B)> -> <Exists C:((A)+(C))=(B)>
 post = ruleFantasy id (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))

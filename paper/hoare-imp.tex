@@ -126,7 +126,7 @@ These rules come from GEB, and we list them here for posterity:
 \item \textbf{Switcheroo Rule}: $<x \lor y>$ and $<\neg x \to y>$ are interchangeable.
 \end{itemize}
 
-For example, here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule} in Haskell, where we use \texttt{Either} to distinguish between provable and unprovable terms:
+Here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule}:
 
 \begin{lstlisting}
 ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> Proof (PropCalc a)
@@ -141,7 +141,9 @@ ruleSepR (Proof (And x y)) = Right $ Proof y
 ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 \end{lstlisting}
 
-That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
+That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms. 
+
+Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
 
 \begin{lstlisting}
 ruleFantasy :: (Proof (PropCalc a) -> Proof (PropCalc a)) -> PropCalc a -> Proof (PropCalc a)
@@ -404,7 +406,7 @@ axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Va
 
 With a few example proofs:
 
-\begin{minipage}[t]{0.49\textwidth}
+\begin{minipage}[t]{0.53\textwidth}
 $\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
 
 \begin{lstlisting}
@@ -439,7 +441,7 @@ let step1 = axiom3 A B
     fromRight $ ruleGeneralize step7 C Nothing
 \end{lstlisting}
 \end{minipage}
-\begin{minipage}[t]{0.49\textwidth}
+\begin{minipage}[t]{0.45\textwidth}
 $\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
 
 \begin{lstlisting}
@@ -684,8 +686,6 @@ We show the evaluation rules for this language:
 
 The map arrow symbol $\underset{ctx}{\mapsto}$ in the rules represents the actual evaluation of a command under context $ctx$.
 
-In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, similarly as before we rely on the \texttt{Either} data type to distinguish between provable and not provable terms.
-
 \begin{lstlisting}
 eval :: (Ord a, Eq a) => Context a -> Command a -> Either String (Context a)
 eval ctx CSkip             = Right ctx
@@ -785,13 +785,11 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 
 \subsection{Implementation}
 
-We represent the Hoare triple as a product of a \texttt{Command a} and the two conditions as \texttt{PropCalc (FOL a)}.
+We represent the Hoare triple as a product of a \texttt{Command a} and the two conditions as \texttt{PropCalc (FOL a)}. As before, triples should not be constructed using \texttt{HoareTriple}, rather through the rules that we provide next.
 
 \begin{lstlisting}
 data HoareTriple a = HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
 \end{lstlisting}
-
-As before, triples should not be constructed using \texttt{HoareTriple}, rather through the rules that we provide next.
 
 \subsubsection{H-Skip}
 
@@ -976,11 +974,7 @@ Now we can deduce a triple which states that from an infinite loop, anything fol
 
 \subsection{A complete proof example}
 
-In this section, we provide a proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution.
-
-According to the program definition, we need to apply the rules in order: H-Sequence, H-Assign, H-While.
-
-Looking at the while rule, we can determine the values of $B$ and $S$ based on the command; meanwhile, one valid invariant would be $\exists C: A + C = B$.
+We provide a proof for the program \texttt{countToB}, namely that $B$ will be equal to $A$ after its execution. According to the program definition, we need to apply the rules in order: H-Sequence, H-Assign, H-While. Looking at the while rule, we can determine the values of $B$ and $S$ based on the command; meanwhile, one valid invariant would be $\exists C: A + C = B$.
 
 \[
 \AxiomC{$\{\neg(A = B) \land \exists C: A + C = B\}A\texttt{ := }S(A) \ \{\exists C: A + C = B\}$}
@@ -1025,25 +1019,22 @@ step4 = fromRight $ hoareConsequence pre step5 post
 Here's the complete proof for the preconditional part:
 
 \begin{lstlisting}
-pre =
-  let premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-      f premise =
-       -- |- ~~Exists C:((A)+(C))=(B)
-       let step1 = ruleDoubleTildeIntro (ruleSepR premise)
-           -- |- ~~((A)+(S(C)))=(B)
-           step2 = applyFOLRule [GoLeft] (\x -> ruleSpec (ruleInterchangeR x) C (S (Var C))) step1
-           -- |- ((A)+(S(C)))=(B)
-           step3 = ruleDoubleTildeElim step2
-           -- |- ((A)+(S(C)))=((S(A))+(C))
-           step4 = ruleSpec (ruleSpec theorem1 C (Var C)) D (Var A)
-           -- |- ((S(A))+(C))=((A)+(S(C)))
-           step5 = ruleSymmetry step4
-           -- |- ((S(A))+(C))=(B)
-           step6 = ruleTransitivity step5 step3
-           -- |- Exists C:((S(A))+(C))=(B)
-           in ruleExistence step6 C []
-     -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
-     in ruleFantasy f premise
+pre = ruleFantasy f premise where
+  premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+  -- |- <<~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>> -> <Exists C:((S(A))+(C))=(B)>
+  f premise = fromRight $ ruleExistence step6 C [] where
+    -- |- ~~Exists C:((A)+(C))=(B)
+    step1 = ruleDoubleTildeIntro (fromRight $ ruleSepR premise)
+    -- |- ~~((A)+(S(C)))=(B)
+    step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) C (S (Var C))) step1
+    -- |- ((A)+(S(C)))=(B)
+    step3 = fromRight $ ruleDoubleTildeElim step2
+    -- |- ((A)+(S(C)))=((S(A))+(C))
+    step4 = fromRight $ ruleSpec (fromRight $ ruleSpec theorem C (Var C)) D (Var A)
+    -- |- ((S(A))+(C))=((A)+(S(C)))
+    step5 = fromRight $ ruleSymmetry step4
+    -- |- ((S(A))+(C))=(B)
+    step6 = fromRight $ ruleTransitivity step5 step3
 \end{lstlisting}
 
 Finally, \texttt{step1} produces the triple:
