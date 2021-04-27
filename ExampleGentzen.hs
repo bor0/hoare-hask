@@ -5,7 +5,9 @@ import Gentzen
 import Common
 
 -- Helpers
-bottom x = And (PropVar (Var x)) (Not (PropVar (Var x)))
+bottom x = And x (Not x)
+-- |- <A> \/ <~A>
+exclMiddle x = ruleSwitcheroo $ ruleFantasy id (Not x)
 
 -- Example proofs for exercises taken from http://incredible.pm/
 
@@ -64,27 +66,56 @@ s2prf9 = ruleFantasy (\prfAimpBAimpC -> ruleFantasy (\prfA -> let prfAimpB = rul
 s3lemma1 x y =
   let f premise =
        let f premise' = rightProof $ ruleDetachment (ruleJoin premise premise') (s4lemma1 x y)
-           step1 = ruleFantasy f (Not (PropVar (Var x)))
+           step1 = ruleFantasy f (Not x)
            step2 = ruleSwitcheroo step1
            in step2
-  in ruleFantasy f (PropVar (Var x))
+  in ruleFantasy f x
 
 s3lemma2 x y = ruleFantasy (\x -> applyPropRule [GoRight] ruleDoubleTildeElim $ ruleSwitcheroo $ ruleContra $ ruleSwitcheroo x) (Or x y)
 
 -- |- <A> -> <<A> \/ <B>>
-s3prf1 = s3lemma1 A B
+s3prf1 = s3lemma1 (PropVar $ Var A) (PropVar $ Var B)
 -- |- <B> -> <<A> \/ <B>>
-s3prf2 = applyPropRule [GoRight] (\prf -> rightProof $ ruleDetachment prf s3prf4') (s3lemma1 B A)
+s3prf2 = applyPropRule [GoRight] (\prf -> rightProof $ ruleDetachment prf s3prf4') (s3lemma1 (PropVar $ Var B) (PropVar $ Var A))
 -- |- <A> -> <<A> \/ <A>>
-s3prf3 = s3lemma1 A A
+s3prf3 = s3lemma1 (PropVar $ Var A) (PropVar $ Var A)
 -- |- <<A> \/ <B>> -> <<B> \/ <A>>
 s3prf4 = s3lemma2 (PropVar $ Var A) (PropVar $ Var B)
 -- |- <<B> \/ <A>> -> <<A> \/ <B>>
 s3prf4' = s3lemma2 (PropVar $ Var B) (PropVar $ Var A)
 -- |- <<A> \/ <<B> /\ <C>>> -> <<<B> /\ <C>> \/ <A>>
 s3prf5 = s3lemma2 (PropVar $ Var A) (And (PropVar (Var B)) (PropVar (Var C)))
+-- |- <<A> /\ <B>> -> <<A> \/ <B>>
+s3prf6 x y = ruleFantasy (\prfAB -> let prfA = ruleSepL prfAB in rightProof $ ruleDetachment prfA (s3lemma1 x y)) (And x y)
+s3prf6' = s3prf6 (PropVar $ Var A) (PropVar $ Var B)
 
-s3prf6 = ruleFantasy (\prfAB -> let prfA = ruleSepL prfAB in rightProof $ ruleDetachment prfA s3prf1) (And (PropVar $ Var A) (PropVar $ Var B))
+s3prf7 = ruleFantasy id (Or (And (PropVar $ Var A) (PropVar $ Var B)) (PropVar $ Var C))
+
+-- |- <<<A> \/ <B>> /\ <~A>> -> <B>
+s3prf8 x y = ruleFantasy (\prf -> let prfAorB = ruleSepL prf in let prfNotA = ruleSepR prf in rightProof $ ruleDetachment prfNotA (ruleSwitcheroo prfAorB)) (And (Or x y) (Not x))
+s3prf8' = s3prf8 (PropVar $ Var A) (PropVar $ Var B)
+
+-- |- <<<A> \/ <B>> /\ <<<A> -> <C>> /\ <<B> -> <C>>>> -> <C>
+s3prf9 = ruleFantasy
+  f
+  (And (Or (PropVar $ Var A) (PropVar $ Var B)) (And (Imp (PropVar $ Var A) (PropVar $ Var C)) (Imp (PropVar $ Var B) (PropVar $ Var C))))
+    where
+    f premise =
+      let prfAorB  = ruleSepL premise
+          prfAimpC = ruleSepL $ ruleSepR premise
+          prfBimpC = ruleSepR $ ruleSepR premise
+          prfCornotC = exclMiddle (PropVar $ Var C)
+          prfnotAtoB = ruleSwitcheroo prfAorB
+          prfnotCtoBottom = ruleFantasy f (Not (PropVar $ Var C))
+            where
+            f premise' = let prfnotA = rightProof $ ruleDetachment premise' $ ruleContra prfAimpC
+                             prfB = rightProof $ ruleDetachment prfnotA $ ruleSwitcheroo prfAorB
+                             prfC = rightProof $ ruleDetachment prfB prfBimpC
+                         in ruleJoin premise' prfC
+          prfnotCtoBottom'  = applyPropRule [GoRight,GoRight] ruleDoubleTildeIntro prfnotCtoBottom
+          prfnotCtoBottom'' = applyPropRule [GoRight] ruleDeMorgan prfnotCtoBottom'
+          prfBottomtoC      = ruleContra prfnotCtoBottom''
+      in rightProof $ ruleDetachment prfCornotC prfBottomtoC
 
 -- | Session 4
 -- |- <<x> /\ <~x>> -> <y>
@@ -94,11 +125,11 @@ s4lemma1 x y =
            right = ruleSepR premise
            prfImp =
              let f _ = ruleDoubleTildeIntro left
-                 step1 = ruleFantasy f (Not (PropVar (Var y)))
+                 step1 = ruleFantasy f (Not y)
                  step2 = ruleContra step1
              in step2
        in rightProof $ ruleDetachment right prfImp
   in ruleFantasy f (bottom x)
 
 -- |- <<A> /\ <~A>> -> <A>
-s4prf1 = s4lemma1 A A
+s4prf1 = s4lemma1 (PropVar $ Var A) (PropVar $ Var A)
