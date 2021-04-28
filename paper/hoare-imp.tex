@@ -732,10 +732,10 @@ Here's an example evaluation with assertion checks:
 > eval (M.fromList [(B, 3)]) countToB
 Right (fromList [(A,3),(B,3)])
 > let toArith x = if x == 0 then Z else S $ toArith (x - 1)
-> let e = CAssert (PropVar $ Eq (toArith 5) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in putStrLn $ "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
-Assert {B=5} countToB {A=5}: Right (fromList [(A,5),(B,5)])
-> let e = CAssert (PropVar $ Eq (toArith 4) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in putStrLn $ "Assert {B=5} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
-Assert {B=5} countToB {A=5}: Left "Pre-condition does not match!"
+> let e = CAssert (PropVar $ Eq (toArith 5) (Var B)) countToB (PropVar $ Eq (Var B) (Var A)) in putStrLn $ "Assert {B=5} countToB {A=B}: " ++ show (eval (M.fromList [(B, 5)]) e)
+Assert {B=5} countToB {A=B}: Right (fromList [(A,5),(B,5)])
+> let e = CAssert (PropVar $ Eq (toArith 4) (Var B)) countToB (PropVar $ Eq (toArith 5) (Var A)) in putStrLn $ "Assert {B=4} countToB {A=5}: " ++ show (eval (M.fromList [(B, 5)]) e)
+Assert {B=4} countToB {A=5}: Left "Assert: Pre-condition does not match!"
 \end{lstlisting}
 
 \section{Hoare logic}
