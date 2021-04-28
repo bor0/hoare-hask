@@ -18,5 +18,5 @@ Check the files in the `examples` folder - each implementation of the system has
 
 For instance, to run the proof for the `countToB` program defined in the paper, execute the following commands:
 
-- `stack repl examples/ExampleHoare.hs --ghci-options -iexamples`
+- `stack repl examples/ExampleHoare.hs --ghci-options -iexamples --ghci-options -isrc`
 - Once in the REPL mode, evaluate `putStrLn $ pr proof`
