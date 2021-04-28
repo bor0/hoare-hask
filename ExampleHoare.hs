@@ -55,4 +55,4 @@ step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var 
 step3 = fromRight $ hoareWhile step4
 
 -- {Exists C:((0)+(C))=(B)} A := 0; (While (~(A)=(B)) Do {A := S(A);}); {<~~(A)=(B)> /\ <Exists C:((A)+(C))=(B)>}
-step1 = fromRight $ hoareSequence step2 step3
+proof = fromRight $ hoareSequence step2 step3
