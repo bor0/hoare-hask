@@ -597,14 +597,14 @@ beval ctx (Imp b1 b2)            = not (beval ctx b1) || beval ctx b2
 Note that we ignore quantifiers in this implementation because we only rely on propositional logic and substitute variables based on the context.
 
 \begin{lstlisting}
-> let e = Plus (Var A) (S Z) in putStrLn $ pr e ++ " = " ++ pr (aeval (M.fromList [(A, 5)]) e)
-A+S0 = 6
-> let e = Plus (Var A) (S (S Z)) in putStrLn $ pr e ++ " = " ++ pr (aeval (M.fromList [(A, 5)]) e)
-A+SS0 = 7
-> let e = PropVar $ Eq (Var A) (S Z) in putStrLn $ pr e ++ " = " ++ pr (beval (M.fromList [(A, 5)]) e)
-A=S0 = False
-> let e = PropVar $ Eq (Var A) (S (S (S (S (S Z))))) in putStrLn $ pr e ++ " = " ++ pr (beval (M.fromList [(A, 5)]) e)
-A=SSSSS0 = True
+> let e = Plus (Var A) (S Z) in putStrLn $ pr e ++ " == " ++ pr (aeval (M.fromList [(A, 5)]) e)
+A+S0 == 6
+> let e = Plus (Var A) (S (S Z)) in putStrLn $ pr e ++ " == " ++ pr (aeval (M.fromList [(A, 5)]) e)
+A+SS0 == 7
+> let e = PropVar $ Eq (Var A) (S Z) in putStrLn $ pr e ++ " == " ++ pr (beval (M.fromList [(A, 5)]) e)
+A=S0 == False
+> let e = PropVar $ Eq (Var A) (S (S (S (S (S Z))))) in putStrLn $ pr e ++ " == " ++ pr (beval (M.fromList [(A, 5)]) e)
+A=SSSSS0 == True
 \end{lstlisting}
 
 \subsection{Commands}
