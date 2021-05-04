@@ -94,7 +94,7 @@ applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Proof $ go pos
   go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))
   go _ x = x
 
--- Get FOL terms, given specific path
+-- Get FOL term, given specific path
 getFOLTerm :: Path -> PropCalc (FOL a) -> PropCalc (FOL a)
 getFOLTerm (_:xs) (PropVar (ForAll x y)) = getFOLTerm xs y
 getFOLTerm (_:xs) (PropVar (Exists x y)) = getFOLTerm xs y
@@ -107,7 +107,7 @@ getFOLTerm (GoRight:xs) (Imp x y)        = getFOLTerm xs y
 getFOLTerm (GoRight:xs) (Or x y)         = getFOLTerm xs y
 getFOLTerm _ x = x
 
--- Get Arith terms, given specific position of equation and path
+-- Get Arith term, given specific position of equation and path
 getArithTerm :: (Pos, Path) -> PropCalc (FOL a) -> Arith a
 getArithTerm (pos, path) (PropVar (Eq x y)) = if pos == GoLeft then go path x else go path y
   where

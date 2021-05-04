@@ -43,16 +43,10 @@ hoareConditional (HoareTriple (And b1 p1) c1 q1) (HoareTriple (And (Not b2) p2) 
   | b1 == b2 &&
     p1 == p2 &&
     q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
-hoareConditional (HoareTriple (And p1 b1) c1 q1) (HoareTriple (And (Not p2) b2) c2 q2)
-  | b1 == b2 &&
-    p1 == p2 &&
-    q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional _ _ = Left "hoareConditional: Cannot construct proof"
 
 -- | Hoare while rule
 hoareWhile :: Eq a => HoareTriple a -> Either String (HoareTriple a)
 hoareWhile (HoareTriple (And b p1) c p2)
-  | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (And (Not b) p1)
-hoareWhile (HoareTriple (And p1 b) c p2)
   | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (And (Not b) p1)
 hoareWhile _ = Left "hoareWhile: Cannot construct proof"
