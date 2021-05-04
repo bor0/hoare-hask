@@ -410,19 +410,19 @@ With a few example proofs:
 $\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
 
 \begin{lstlisting}
--- |- All A:All B:A+SB=S(A+B)
+-- |- All A:All B:(A+SB=S(A+B))
 let step1 = axiom3 A B
-    -- |- All B:D+SB=S(D+B)
+    -- |- All B:(D+SB=S(D+B))
     step2 = fromRight $ ruleSpec step1 A (Var D)
     -- |- D+SSC=S(D+SC)
     step3 = fromRight $ ruleSpec step2 B (S (Var C))
-    -- |- All B:SD+SB=S(SD+B)
+    -- |- All B:(SD+SB=S(SD+B))
     step4 = fromRight $ ruleSpec step1 A (S (Var D))
     -- |- SD+SC=S(SD+C)
     step5 = fromRight $ ruleSpec step4 B (Var C)
     -- |- S(SD+C)=SD+SC
     step6 = fromRight $ ruleSymmetry step5
-    -- All D:D+SC=SD+C
+    -- All D:(D+SC=SD+C)
     premise = PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))
     f premise =
      -- |- D+SC=SD+C
@@ -433,11 +433,11 @@ let step1 = axiom3 A B
          step10 = fromRight $ ruleTransitivity step3 step9
          -- |- D+SSC=SD+SC
          step11 = fromRight $ ruleTransitivity step10 step6
-         -- |- All D:D+SSC=SD+SC
+         -- |- All D:(D+SSC=SD+SC)
          in fromRight $ ruleGeneralize step11 D (Just premise)
-    -- |- All D:D+SC=SD+C -> All D:D+SSC=SD+SC
+    -- |- All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)
     step7 = ruleFantasy f premise
-    -- lemma1 |- All C:All D:D+SC=SD+C -> All D:D+SSC=SD+SC
+    -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
     in fromRight $ ruleGeneralize step7 C Nothing
 \end{lstlisting}
 \end{minipage}
@@ -445,15 +445,15 @@ let step1 = axiom3 A B
 $\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
 
 \begin{lstlisting}
--- |- All A:All B:A+SB=S(A+B)
+-- |- All A:All B:(A+SB=S(A+B))
 let step1 = axiom3 A B
-    -- |- All B:D+SB=S(D+B)
+    -- |- All B:(D+SB=S(D+B))
     step2 = fromRight $ ruleSpec step1 A (Var D)
     -- |- D+SSC=S(D+SC)
     step3 = fromRight $ ruleSpec step2 B (S (Var C))
     -- |- D+S0=S(D+0)
     step4 = fromRight $ ruleSpec step2 B Z
-    -- |- All A:A+0=A
+    -- |- All A:(A+0=A)
     step5 = axiom2 A
     -- |- D+0=D
     step6 = fromRight $ ruleSpec step5 A (Var D)
@@ -467,14 +467,14 @@ let step1 = axiom3 A B
     step10 = fromRight $ ruleSymmetry step9
     -- |- D+S0=SD+0
     step11 = fromRight $ ruleTransitivity step8 step10
-    -- lemma2 |- All D:D+S0=SD+0
+    -- lemma2 |- All D:(D+S0=SD+0)
     in fromRight $ ruleGeneralize step11 D Nothing
 \end{lstlisting}
 
 $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:
 
 \begin{lstlisting}
--- |- All C:All D:D+SC=SD+C
+-- |- All C:All D:(D+SC=SD+C)
 theorem = fromRight $ ruleInduction lemma2 lemma1
 \end{lstlisting}
 \end{minipage}
@@ -999,7 +999,7 @@ To start with, we consider the following code:
 
 \begin{lstlisting}
 > let step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-{Exists C:SA+C=B} A := SA; {Exists C:A+C=B}
+{Exists C:(SA+C=B)} A := SA; {Exists C:(A+C=B)}
 \end{lstlisting}
 
 The resulting triple is close but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
@@ -1016,9 +1016,9 @@ Here's the complete proof for the preconditional part:
 \begin{lstlisting}
 pre = ruleFantasy f premise where
   premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-  -- |- ~A=B /\ Exists C:A+C=B -> Exists C:SA+C=B
+  -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
   f premise = fromRight $ ruleExistence step6 C [] where
-    -- |- ~~Exists C:A+C=B
+    -- |- ~~Exists C:(A+C=B)
     step1 = ruleDoubleTildeIntro (fromRight $ ruleSepR premise)
     -- |- ~~A+SC=B
     step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) C (S (Var C))) step1

@@ -50,8 +50,8 @@ instance Pretty a => Pretty (Arith a) where
 
 instance Pretty a => Pretty (FOL a) where
   prPrec q (Eq a b)  = prParen (q > 3) ("(",")") $ prPrec 4 a ++ "=" ++ prPrec 3 b
-  prPrec q (ForAll x y) = "All " ++ prPrec q x ++ ":" ++ prPrec q y
-  prPrec q (Exists x y) = "Exists " ++ prPrec q x ++ ":" ++ prPrec q y
+  prPrec q (ForAll x y) = prParen (q > 7) ("(",")") $ "All " ++ prPrec 8 x ++ ":" ++ prPrec 7 y
+  prPrec q (Exists x y) = prParen (q > 8) ("(",")") $ "Exists " ++ prPrec 9 x ++ ":" ++ prPrec 8 y
 
 {- Helper functions -}
 
