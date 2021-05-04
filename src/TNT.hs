@@ -44,14 +44,14 @@ data FOL a =
 instance Pretty a => Pretty (Arith a) where
   prPrec q (Var a)     = prPrec q a
   prPrec q Z           = "0"
-  prPrec q (Plus a b)  = prParen (q > 4) ("(",")") $ prPrec 5 a ++ "+" ++ prPrec 4 b
-  prPrec q (Mult a b)  = prParen (q > 5) ("(",")") $ prPrec 6 a ++ "*" ++ prPrec 5 b
-  prPrec q (S a)       = prParen (q > 6) ("(",")") $ "S" ++ prPrec 6 a
+  prPrec q (Plus a b)  = prParen (q > 5) ("(",")") $ prPrec 6 a ++ "+" ++ prPrec 5 b
+  prPrec q (Mult a b)  = prParen (q > 6) ("(",")") $ prPrec 7 a ++ "*" ++ prPrec 6 b
+  prPrec q (S a)       = prParen (q > 7) ("(",")") $ "S" ++ prPrec 7 a
 
 instance Pretty a => Pretty (FOL a) where
-  prPrec q (Eq a b)  = prParen (q > 3) ("(",")") $ prPrec 4 a ++ "=" ++ prPrec 3 b
-  prPrec q (ForAll x y) = prParen (q > 7) ("(",")") $ "All " ++ prPrec 8 x ++ ":" ++ prPrec 7 y
-  prPrec q (Exists x y) = prParen (q > 8) ("(",")") $ "Exists " ++ prPrec 9 x ++ ":" ++ prPrec 8 y
+  prPrec q (Eq a b)  = prParen (q > 4) ("(",")") $ prPrec 5 a ++ "=" ++ prPrec 4 b
+  prPrec q (ForAll x y) = prParen (q > 8) ("(",")") $ "All " ++ prPrec 9 x ++ ":" ++ prPrec 8 y
+  prPrec q (Exists x y) = prParen (q > 9) ("(",")") $ "Exists " ++ prPrec 10 x ++ ":" ++ prPrec 9 y
 
 {- Helper functions -}
 
