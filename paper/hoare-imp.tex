@@ -843,7 +843,6 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 |- <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>> -> <<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>>
 > let post = ruleFantasy (fromRight . ruleSepL) $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
 |- <<(A)=(S(S(0)))> /\ <(0)=(0)>> -> <(A)=(S(S(0)))>
-> hoareConsequence pre tripleEg post
 > putStrLn $ pr $ fromRight $ hoareConsequence pre tripleEg post
 {<((B)+(S(0)))=(S(S(0)))> /\ <(0)=(0)>} A := (B)+(S(0)); {(A)=(S(S(0)))}
 \end{lstlisting}
@@ -955,11 +954,11 @@ Again, for the purposes of example, consider the following command:
 Similarly as we did in the example for the H-Conditional rule, following the rule to construct a Hoare triple for this command, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
 
 \begin{lstlisting}
-> let c = hoareSkip (PropVar $ Eq Z Z)
+> let c = hoareSkip (PropVar $ Eq Z Z) :: HoareTriple Integer
 {(0)=(0)} ; {(0)=(0)}
-> let pre = ruleFantasy (fromRight . ruleSepR) (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z))
+> let pre = ruleFantasy (fromRight . ruleSepR) (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) :: Proof (PropCalc (FOL Integer))
 |- <<(0)=(0)> /\ <(0)=(0)>> -> <(0)=(0)>
-> let post = ruleFantasy id (PropVar $ Eq Z Z)
+> let post = ruleFantasy id (PropVar $ Eq Z Z) :: Proof (PropCalc (FOL Integer))
 |- <(0)=(0)> -> <(0)=(0)>
 > putStrLn $ pr $ fromRight $ hoareConsequence pre c post
 {<(0)=(0)> /\ <(0)=(0)>} ; {(0)=(0)}
