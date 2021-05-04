@@ -16,12 +16,12 @@ data Command a =
   deriving (Show)
 
 instance Pretty a => Pretty (Command a) where
-  pr CSkip           = ";"
-  pr (CAssign x y)   = pr x ++ " := " ++ pr y ++ ";"
-  pr (CSequence x y) = pr x ++ " " ++ pr y
-  pr (CIfElse x y z) = "(If (" ++ pr x ++ ") Then (" ++ pr y ++ ") Else (" ++ pr z ++ "));"
-  pr (CWhile x y)    = "(While (" ++ pr x ++ ") Do {" ++ pr y ++ "});"
-  pr (CAssert x y z) = "(Assert {" ++ pr x ++ "} (" ++ pr y ++ ") {" ++ pr z ++ "});"
+  prPrec q CSkip           = ";"
+  prPrec q (CAssign x y)   = prPrec q x ++ " := " ++ prPrec q y ++ ";"
+  prPrec q (CSequence x y) = prPrec q x ++ " " ++ prPrec q y
+  prPrec q (CIfElse x y z) = "(If (" ++ prPrec q x ++ ") Then (" ++ prPrec q y ++ ") Else (" ++ prPrec q z ++ "));"
+  prPrec q (CWhile x y)    = "(While (" ++ prPrec q x ++ ") Do {" ++ prPrec q y ++ "});"
+  prPrec q (CAssert x y z) = "(Assert {" ++ prPrec q x ++ "} (" ++ prPrec q y ++ ") {" ++ prPrec q z ++ "});"
 
 type Context a = M.Map a Integer
 

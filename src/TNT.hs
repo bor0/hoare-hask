@@ -42,16 +42,16 @@ data FOL a =
   deriving (Eq, Show)
 
 instance Pretty a => Pretty (Arith a) where
-  pr (Var a)     = pr a
-  pr Z           = "0"
-  pr (S a)       = "S(" ++ pr a ++ ")"
-  pr (Plus a b)  = "(" ++ pr a ++ ")+(" ++ pr b ++ ")"
-  pr (Mult a b)  = "(" ++ pr a ++ ")*(" ++ pr b ++ ")"
+  prPrec q (Var a)     = prPrec q a
+  prPrec q Z           = "0"
+  prPrec q (Plus a b)  = prParen (q > 4) ("(",")") $ prPrec 5 a ++ "+" ++ prPrec 4 b
+  prPrec q (Mult a b)  = prParen (q > 5) ("(",")") $ prPrec 6 a ++ "*" ++ prPrec 5 b
+  prPrec q (S a)       = prParen (q > 6) ("(",")") $ "S" ++ prPrec 6 a
 
 instance Pretty a => Pretty (FOL a) where
-  pr (Eq a b) = "(" ++ pr a ++ ")=(" ++ pr b ++ ")"
-  pr (ForAll x y) = "All " ++ pr x ++ ":" ++ pr y
-  pr (Exists x y) = "Exists " ++ pr x ++ ":" ++ pr y
+  prPrec q (Eq a b)  = prParen (q > 3) ("(",")") $ prPrec 4 a ++ "=" ++ prPrec 3 b
+  prPrec q (ForAll x y) = "All " ++ prPrec q x ++ ":" ++ prPrec q y
+  prPrec q (Exists x y) = "Exists " ++ prPrec q x ++ ":" ++ prPrec q y
 
 {- Helper functions -}
 

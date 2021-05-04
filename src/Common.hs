@@ -28,4 +28,4 @@ fromProof :: Proof a -> a
 fromProof (Proof a) = a
 
 instance Pretty a => Pretty (Proof a) where
-  pr (Proof a) = "|- " ++ pr a
+  prPrec x (Proof a) = "|- " ++ prPrec x a

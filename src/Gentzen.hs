@@ -14,11 +14,15 @@ data PropCalc a =
   deriving (Eq, Show)
 
 instance Pretty a => Pretty (PropCalc a) where
-  pr (PropVar a) = pr a
-  pr (Not a)     = "~" ++ pr a
-  pr (And a b)   = "<" ++ pr a ++ "> /\\ <" ++ pr b ++ ">"
-  pr (Or a b)    = "<" ++ pr a ++ "> \\/ <" ++ pr b ++ ">"
-  pr (Imp a b)   = "<" ++ pr a ++ "> -> <" ++ pr b ++ ">"
+  prPrec x (PropVar a) = prPrec x a
+  prPrec q (Not formula) = prParen (q > 3) ("<",">") $
+    "~" ++ prPrec 3 formula
+  prPrec q (And lhs rhs) = prParen (q > 2) ("<",">") $
+    prPrec 3 lhs ++ " /\\ " ++ prPrec 2 rhs
+  prPrec q (Or lhs rhs) = prParen (q > 1) ("<",">") $
+    prPrec 2 lhs ++ " \\/ " ++ prPrec 1 rhs
+  prPrec q (Imp lhs rhs) = prParen (q > 0) ("<",">") $
+    prPrec 1 lhs ++ " -> " ++ prPrec 0 rhs
 
 {- Helper functions -}
 

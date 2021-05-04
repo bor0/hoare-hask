@@ -11,7 +11,7 @@ data HoareTriple a =
   deriving (Show)
 
 instance Pretty a => Pretty (HoareTriple a) where
-  pr (HoareTriple pre c post) = "{" ++ pr pre ++ "} " ++ pr c ++ " {" ++ pr post ++ "}"
+  prPrec q (HoareTriple pre c post) = "{" ++ prPrec q pre ++ "} " ++ prPrec q c ++ " {" ++ prPrec q post ++ "}"
 
 -- | Hoare skip rule
 hoareSkip :: PropCalc (FOL a) -> HoareTriple a
