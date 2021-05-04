@@ -7,8 +7,9 @@ import PrettyPrinter
 import TNT
 
 -- Helpers
+-- |- x /\ ~x
 bottom x = And x (Not x)
--- |- <A> \/ <~A>
+-- |- x \/ ~x
 exclMiddle x = ruleSwitcheroo $ ruleFantasy id (Not x)
 
 -- Example proofs for exercises taken from http://incredible.pm/
@@ -22,67 +23,67 @@ s1lemma1 a b = ruleFantasy f (Not (Imp a b))
        step2 = ruleDeMorgan $ applyPropRule [GoLeft] (fromRight . ruleSwitcheroo) step1
        in applyPropRule [GoLeft] (fromRight . ruleDoubleTildeElim) $ fromRight step2
 
--- |- <A> -> <A>
+-- |- A -> A
 s1prf1 = ruleFantasy id (PropVar (Var A))
--- |- <<A> /\ <B>> -> <A>
+-- |- A /\ B -> A
 s1prf2 = ruleFantasy (fromRight . ruleSepL) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <B>
+-- |- A /\ B -> B
 s1prf3 = ruleFantasy (fromRight . ruleSepR) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <A>
+-- |- A /\ B -> A
 s1prf3_2 = ruleFantasy (fromRight . ruleSepL) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <<A> /\ <B>>
+-- |- A /\ B -> A /\ B
 s1prf4 = ruleFantasy id (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <A> -> <<A> /\ <A>>
+-- |- A -> A /\ A
 s1prf5 = ruleFantasy (\prfA -> ruleJoin prfA prfA) (PropVar (Var A))
--- |- <<A> /\ <B>> -> <A>
+-- |- A /\ B -> A
 s1prf6 = ruleFantasy (\prfAB -> fromRight $ ruleSepL prfAB) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <A>
+-- |- A /\ B -> A
 s1prf7 = ruleFantasy (fromRight . ruleSepL) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <B>
+-- |- A /\ B -> B
 s1prf7_2 = ruleFantasy (fromRight . ruleSepR) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <<A> /\ <B>>
+-- |- A /\ B -> A /\ B
 s1prf8 = ruleFantasy id (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<A> /\ <B>> -> <<B> /\ <A>>
+-- |- A /\ B -> B /\ A
 s1prf9 = ruleFantasy (\prfAB -> ruleJoin (fromRight $ ruleSepR prfAB) (fromRight $ ruleSepL prfAB)) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <<<A> /\ <B>> /\ <C>> -> <A>
+-- |- <A /\ B> /\ C -> A
 s1prf10 = ruleFantasy (\prfABC -> fromRight $ ruleSepL $ fromRight $ ruleSepL prfABC) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<<A> /\ <B>> /\ <C>> -> <B>
+-- |- <A /\ B> /\ C -> B
 s1prf10_2 = ruleFantasy (\prfABC -> fromRight $ ruleSepR $ fromRight $ ruleSepL prfABC) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<<A> /\ <B>> /\ <C>> -> <C>
+-- |- <A /\ B> /\ C -> C
 s1prf10_3 = ruleFantasy (\prfABC -> fromRight $ ruleSepR prfABC) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<<A> /\ <B>> /\ <C>> -> <<A> /\ <C>>
+-- |- <A /\ B> /\ C -> A /\ C
 s1prf11 = ruleFantasy (\prfABC -> ruleJoin (fromRight $ ruleSepL $ fromRight $ ruleSepL prfABC) (fromRight $ ruleSepR prfABC)) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<<A> /\ <B>> /\ <C>> -> <<A> /\ <<B> /\ <C>>>
+-- |- <A /\ B> /\ C -> A /\ B /\ C
 s1prf12 = ruleFantasy (\prfABC -> ruleJoin (fromRight $ ruleSepL $ fromRight $ ruleSepL prfABC) (ruleJoin (fromRight $ ruleSepR $ fromRight $ ruleSepL prfABC) (fromRight $ ruleSepR prfABC))) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
 
 -- | Session 2
--- |- <<A> /\ <<A> -> <B>>> -> <B>
+-- |- A /\ <A -> B> -> B
 s2prf1 = ruleFantasy (\prfAAtoB -> fromRight $ ruleDetachment (fromRight $ ruleSepL prfAAtoB) (fromRight $ ruleSepR prfAAtoB)) (And (PropVar (Var A)) (Imp (PropVar (Var A)) (PropVar (Var B))))
--- |- <<A> /\ <<<A> -> <B>> /\ <<B> -> <C>>>> -> <C>
+-- |- A /\ <A -> B> /\ <B -> C> -> C
 s2prf2 = ruleFantasy (\prfAAtoBAtoC -> let prfA = fromRight (ruleSepL prfAAtoBAtoC) in let prfAtoB = fromRight (ruleSepL $ fromRight $ ruleSepR prfAAtoBAtoC) in let prfBtoC = fromRight (ruleSepR $ fromRight $ ruleSepR prfAAtoBAtoC) in fromRight $ ruleDetachment (fromRight $ ruleDetachment prfA prfAtoB) prfBtoC) (And (PropVar (Var A)) (And (Imp (PropVar (Var A)) (PropVar (Var B))) (Imp (PropVar (Var B)) (PropVar (Var C)))))
--- |- <<A> /\ <<<<A> -> <B>> /\ <<B> -> <D>>> /\ <<<A> -> <C>> /\ <<C> -> <D>>>>> -> <D>
+-- |- A /\ <<A -> B> /\ <B -> D>> /\ <A -> C> /\ <C -> D> -> D
 s2prf3 = ruleFantasy (\premise -> let prfA = fromRight $ ruleSepL premise in let prfAtoCCtoD = fromRight $ ruleSepR $ fromRight $ ruleSepR premise in let prfAtoC = fromRight $ ruleSepL prfAtoCCtoD in let prfCtoD = fromRight $ ruleSepR prfAtoCCtoD in fromRight $ ruleDetachment (fromRight $ ruleDetachment prfA prfAtoC) prfCtoD) (And (PropVar (Var A)) (And (And (Imp (PropVar (Var A)) (PropVar (Var B))) (Imp (PropVar (Var B)) (PropVar (Var D)))) (And (Imp (PropVar (Var A)) (PropVar (Var C))) (Imp (PropVar (Var C)) (PropVar (Var D))))))
--- |- <A> -> <<<A> -> <A>> -> <A>>
+-- |- A -> <A -> A> -> A
 s2prf4 = ruleFantasy (\prfA -> ruleFantasy (\prfAimpA -> fromRight $ ruleDetachment prfA prfAimpA) (Imp (PropVar (Var A)) (PropVar (Var A)))) (PropVar (Var A))
--- |- <<<A> -> <B>> /\ <<B> -> <C>>> -> <<A> -> <C>>
+-- |- <A -> B> /\ <B -> C> -> A -> C
 s2prf5 = ruleFantasy (\premise -> let prfAtoB = fromRight $ ruleSepL premise in let prfBtoC = fromRight $ ruleSepR premise in ruleFantasy (\prfA -> let prfB = fromRight $ ruleDetachment prfA prfAtoB in fromRight $ ruleDetachment prfB prfBtoC) (PropVar (Var A))) (And (Imp (PropVar (Var A)) (PropVar (Var B))) (Imp (PropVar (Var B)) (PropVar (Var C))))
--- |- <<<A> -> <B>> /\ <<A> -> <<B> -> <C>>>> -> <<A> -> <C>>
+-- |- <A -> B> /\ <A -> B -> C> -> A -> C
 s2prf6 = ruleFantasy (\premise -> let prfAtoB = fromRight $ ruleSepL premise in let prfAtoBtoC = fromRight $ ruleSepR premise in ruleFantasy (\prfA -> let prfB = fromRight $ ruleDetachment prfA prfAtoB in fromRight $ ruleDetachment prfB $ fromRight $ ruleDetachment prfA prfAtoBtoC) (PropVar (Var A))) (And (Imp (PropVar (Var A)) (PropVar (Var B))) (Imp (PropVar (Var A)) (Imp (PropVar (Var B)) (PropVar (Var C)))))
--- |- <A> -> <A>
+-- |- A -> A
 s2prf7 = ruleFantasy id (PropVar (Var A))
--- |- <<<<A> -> <C>> /\ <<B> -> <C>>> /\ <<A> /\ <B>>> -> <C>
+-- |- <<A -> C> /\ <B -> C>> /\ A /\ B -> C
 s2prf8 = ruleFantasy (\premise -> let prfAtoCBtoC = fromRight $ ruleSepL premise in let prfAtoC = fromRight $ ruleSepL prfAtoCBtoC in let prfAB = fromRight $ ruleSepR premise in let prfA = fromRight $ ruleSepL prfAB in fromRight $ ruleDetachment prfA prfAtoC) (And (And (Imp (PropVar (Var A)) (PropVar (Var C))) (Imp (PropVar (Var B)) (PropVar (Var C)))) (And (PropVar (Var A)) (PropVar (Var B))))
--- |- <<<A> -> <C>> /\ <<B> -> <C>>> -> <<<A> /\ <B>> -> <C>>
+-- |- <A -> C> /\ <B -> C> -> A /\ B -> C
 s2prf9 = ruleFantasy (\premise -> let prfAtoC = fromRight $ ruleSepL premise in ruleFantasy (\prfAB -> let prfA = fromRight $ ruleSepL prfAB in fromRight $ ruleDetachment prfA prfAtoC) (And (PropVar (Var A)) (PropVar (Var B)))) (And (Imp (PropVar (Var A)) (PropVar (Var C))) (Imp (PropVar (Var B)) (PropVar (Var C))))
--- |- <B> -> <<A> -> <B>>
+-- |- B -> A -> B
 s2prf10 = ruleFantasy (\prfB -> ruleFantasy (\prfA -> prfB) (PropVar (Var A))) (PropVar (Var B))
--- |- <<<A> /\ <B>> -> <C>> -> <<A> -> <<B> -> <C>>>
+-- |- <A /\ B -> C> -> A -> B -> C
 s2prf11 = ruleFantasy (\prfABtoC -> ruleFantasy (\prfA -> ruleFantasy (\prfB -> fromRight $ ruleDetachment (ruleJoin prfA prfB) prfABtoC) (PropVar (Var B))) (PropVar (Var A))) (Imp (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<A> -> <<B> -> <C>>> -> <<<A> /\ <B>> -> <C>>
+-- |- <A -> B -> C> -> A /\ B -> C
 s2prf12 = ruleFantasy (\prfAtoBtoC -> ruleFantasy (\prfAB -> let prfA = fromRight $ ruleSepL prfAB in let prfB = fromRight $ ruleSepR prfAB in let prfBtoC = fromRight $ ruleDetachment prfA prfAtoBtoC in fromRight $ ruleDetachment prfB prfBtoC) (And (PropVar (Var A)) (PropVar (Var B)))) (Imp (PropVar (Var A)) (Imp (PropVar (Var B)) (PropVar (Var C))))
--- |- <<<A> -> <B>> /\ <<A> -> <C>>> -> <<A> -> <<B> /\ <C>>>
+-- |- <A -> B> /\ <A -> C> -> A -> B /\ C
 s2prf13 = ruleFantasy (\prfAtoBAtoC -> ruleFantasy (\prfA -> let prfAtoB = fromRight $ ruleSepL prfAtoBAtoC in let prfAtoC = fromRight $ ruleSepR prfAtoBAtoC in let prfB = fromRight $ ruleDetachment prfA prfAtoB in let prfC = fromRight $ ruleDetachment prfA prfAtoC in ruleJoin prfB prfC) (PropVar (Var A))) (And (Imp (PropVar (Var A)) (PropVar (Var B))) (Imp (PropVar (Var A)) (PropVar (Var C))))
--- |- <<<A> -> <<A> -> <B>>> /\ <<<A> -> <B>> -> <B>>> -> <B>
+-- |- <A -> A -> B> /\ <<A -> B> -> B> -> B
 s2prf14 = ruleFantasy f (And (Imp (PropVar (Var A)) (Imp (PropVar (Var A)) (PropVar (Var B)))) (Imp (Imp (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var B))))
   where
   f premise =

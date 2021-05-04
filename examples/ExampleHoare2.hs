@@ -19,12 +19,12 @@ swapAB =
 -- Example evaluation
 egEval = eval (M.fromList [(A, 3), (B, 5)]) swapAB
 
--- {<(A)=(D)> /\ <(B)=(E)>} C := A; {<(C)=(D)> /\ <(B)=(E)>}
+-- {A=D /\ B=E} C := A; {C=D /\ B=E}
 ht1 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var C) (Var D)) (PropVar $ Eq (Var B) (Var E)))
--- {<(C)=(D)> /\ <(B)=(E)>} A := B; {<(C)=(D)> /\ <(A)=(E)>}
+-- {C=D /\ B=E} A := B; {C=D /\ A=E}
 ht2 = hoareAssignment A (Var B) (And (PropVar $ Eq (Var C) (Var D)) (PropVar $ Eq (Var A) (Var E)))
--- {<(C)=(D)> /\ <(A)=(E)>} B := C; {<(B)=(D)> /\ <(A)=(E)>}
+-- {C=D /\ A=E} B := C; {B=D /\ A=E}
 ht3 = hoareAssignment B (Var C) (And (PropVar $ Eq (Var B) (Var D)) (PropVar $ Eq (Var A) (Var E)))
 
--- {<(A)=(D)> /\ <(B)=(E)>} C := A; A := B; B := C; {<(B)=(D)> /\ <(A)=(E)>}
+-- {A=D /\ B=E} C := A; A := B; B := C; {B=D /\ A=E}
 proof = fromRight $ hoareSequence ht1 (fromRight $ hoareSequence ht2 ht3)
