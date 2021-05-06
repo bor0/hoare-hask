@@ -96,7 +96,7 @@ s2prf14 = ruleFantasy f (And (Imp (PropVar (Var A)) (Imp (PropVar (Var A)) (Prop
        in fromRight $ ruleDetachment excld $ fromRight $ ruleDetachment (ruleJoin p1 p2) disjElim
 
 -- | Session 3
--- |- <x> -> <<x> \/ <y>>
+-- |- x -> x \/ y
 s3lemma1 x y =
   let f premise =
        let f premise' = fromRight $ ruleDetachment (ruleJoin premise premise') (s4lemma1 x y)
@@ -104,9 +104,9 @@ s3lemma1 x y =
            step2 = fromRight $ ruleSwitcheroo step1
            in step2
   in ruleFantasy f x
--- |- <<x> \/ <y>> -> <<y> \/ <x>>
+-- |- x \/ y -> y \/ x
 s3lemma2 x y = ruleFantasy (\x -> applyPropRule [GoRight] (fromRight . ruleDoubleTildeElim) (fromRight $ ruleSwitcheroo $ fromRight $ ruleContra $ fromRight $ ruleSwitcheroo x)) (Or x y)
--- |- <<<a> \/ <b>> /\ <<<a> -> <c>> /\ <<b> -> <c>>>> -> <c> (props int-e@freenode)
+-- |- <a -> c> /\ <b -> c> -> a \/ b -> c
 s3lemma3 a b c = ruleFantasy
   f
   (And (Imp a c) (Imp b c))
@@ -129,18 +129,76 @@ s3lemma3 a b c = ruleFantasy
             prfnotCtoBottom'' = applyPropRule [GoRight] (fromRight . ruleDeMorgan) prfnotCtoBottom'
             prfCornotCtoC     = fromRight $ ruleContra prfnotCtoBottom''
         in fromRight $ ruleDetachment prfCornotC prfCornotCtoC
+-- |- <<a -> d> /\ <b -> d>> /\ <c -> d> -> <a \/ b> \/ c -> d
+s3lemma3_2 a b c d = ruleFantasy
+  f
+  (And (And (Imp a d) (Imp b d)) (Imp c d))
+    where
+    f premise =
+      ruleFantasy f' (Or (Or a b) c)
+      where
+      f' prfAorBorC =
+        let prfAimpD = fromRight $ ruleSepL $ fromRight $ ruleSepL premise
+            prfBimpD = fromRight $ ruleSepR $ fromRight $ ruleSepL premise
+            prfCimpD = fromRight $ ruleSepR premise
+            prfBornotB = fromRight $ exclMiddle b
+            -- ~<A \/ B> -> C
+            prfnotAorBtoC = fromRight $ ruleSwitcheroo prfAorBorC
+            -- ~<~A -> B> -> C
+            prfnotnotAtoBtoC = applyPropRule [GoLeft,GoLeft] (\x -> fromRight $ ruleSwitcheroo x) prfnotAorBtoC
+            -- ~C -> ~~<~A -> B>
+            prfnotCtonotAtoB = applyPropRule [GoRight] (fromRight . ruleDoubleTildeElim) $ fromRight $ ruleContra prfnotnotAtoBtoC
+            prfnotDtoBottom = ruleFantasy f (Not d)
+              where
+              f premise' = let prfnotA = fromRight $ ruleDetachment premise' $ fromRight $ ruleContra prfAimpD
+                               prfnotB = fromRight $ ruleDetachment premise' $ fromRight $ ruleContra prfBimpD
+                               prfnotC = fromRight $ ruleDetachment premise' $ fromRight $ ruleContra prfCimpD
+                               prfnotAtoB = fromRight $ ruleDetachment prfnotC prfnotCtonotAtoB
+                               prfB = fromRight $ ruleDetachment prfnotA prfnotAtoB
+                           in ruleJoin prfB prfnotB
+            prfnotDtoBottom'  = applyPropRule [GoRight,GoLeft] ruleDoubleTildeIntro prfnotDtoBottom
+            prfnotDtoBottom'' = applyPropRule [GoRight] (fromRight . ruleDeMorgan) prfnotDtoBottom'
+            prfnotBorBtoD     = fromRight $ ruleContra prfnotDtoBottom''
+            prfBornotBtoD     = applyPropRule [GoLeft] (\f -> fromRight $ ruleDetachment f $ s3lemma2 (Not b) b) prfnotBorBtoD
+        in fromRight $ ruleDetachment prfBornotB prfBornotBtoD
+-- |- <a \/ b -> c> -> <a -> c> /\ <b -> c>
+s3lemma4 a b c =
+  let f prfAorBimpC =
+       let step1 = applyPropRule [GoLeft] ruleDoubleTildeIntro prfAorBimpC
+           step2 = applyPropRule [GoLeft,GoLeft] (fromRight . ruleDeMorgan) step1
+           prfnotAandnotBorC = fromRight $ ruleSwitcheroo step2
+           prf = s3lemma3 (And (Not a) (Not b)) c (And (Imp a c) (Imp b c))
+           prf1 =
+            let f' prfnotAandnotB =
+                 let prfnotA = fromRight $ ruleSepL prfnotAandnotB
+                     prfnotB = fromRight $ ruleSepR prfnotAandnotB
+                     prfnotCimpnotA = ruleFantasy (\_ -> prfnotA) (Not c)
+                     prfnotBimpnotA = ruleFantasy (\_ -> prfnotB) (Not c)
+                     prfAimpC = fromRight $ ruleContra prfnotCimpnotA
+                     prfBimpC = fromRight $ ruleContra prfnotBimpnotA
+                     in ruleJoin prfAimpC prfBimpC
+                in ruleFantasy f' (And (Not a) (Not b))
+           prf2 =
+            let f' prfC =
+                 let prfCAimpC = ruleFantasy (\_ -> prfC) a
+                     prfCBimpC = ruleFantasy (\_ -> prfC) b
+                     in ruleJoin prfCAimpC prfCBimpC
+                in ruleFantasy f' c
+           joined = ruleJoin prf1 prf2
+       in fromRight $ ruleDetachment prfnotAandnotBorC $ fromRight $ ruleDetachment joined prf
+  in ruleFantasy f (Imp (Or a b) c)
 
--- |- <<A> /\ <B>> -> <<A> \/ <B>>
+-- |- A /\ B -> A \/ B
 s3prf1 = ruleFantasy (\prfAB -> let prfA = fromRight $ ruleSepL prfAB in fromRight $ ruleDetachment prfA (s3lemma1 (PropVar (Var A)) (PropVar (Var B)))) (And (PropVar (Var A)) (PropVar (Var B)))
--- |- <A> -> <<A> \/ <B>>
+-- |- A -> A \/ B
 s3prf2 = s3lemma1 (PropVar $ Var A) (PropVar $ Var B)
--- |- <B> -> <<A> \/ <B>>
+-- |- B -> A \/ B
 s3prf3 = applyPropRule [GoRight] (\prf -> fromRight $ ruleDetachment prf $ s3lemma2 (PropVar $ Var B) (PropVar $ Var A)) (s3lemma1 (PropVar $ Var B) (PropVar $ Var A))
--- |- <A> -> <<A> \/ <A>>
+-- |- A -> A \/ A
 s3prf4 = s3lemma1 (PropVar $ Var A) (PropVar $ Var A)
--- |- <<A> \/ <B>> -> <<B> \/ <A>>
+-- |- A \/ B -> B \/ A
 s3prf5 = s3lemma2 (PropVar $ Var A) (PropVar $ Var B)
--- |- <<A> \/ <<B> \/ <C>>> -> <<<A> \/ <B>> \/ <C>>
+-- |- A \/ B \/ C -> <A \/ B> \/ C
 s3prf6 =
   let f prfAorBorC =
        let prf = s3lemma3 (PropVar $ Var A) (Or (PropVar $ Var B) (PropVar $ Var C)) (Or (Or (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
@@ -172,9 +230,9 @@ s3prf6 =
            joined = ruleJoin prf1 prf2
        in fromRight $ ruleDetachment prfAorBorC $ fromRight $ ruleDetachment joined prf
   in ruleFantasy f (Or (PropVar (Var A)) (Or (PropVar (Var B)) (PropVar (Var C))))
--- |- <<A> /\ <B>> -> <<A> \/ <B>>
+-- |- A /\ B -> A \/ B
 s3prf7 = s3prf1
--- |- <<<A> /\ <B>> \/ <C>> -> <<<A> \/ <C>> /\ <<B> \/ <C>>>
+-- |- A /\ B \/ C -> <A \/ C> /\ <B \/ C>
 s3prf8 =
   let f prfAandBorC =
        let prf = s3lemma3 (And (PropVar $ Var A) (PropVar $ Var B)) (PropVar $ Var C) (And (Or (PropVar (Var A)) (PropVar (Var C))) (Or (PropVar (Var B)) (PropVar (Var C))))
@@ -197,7 +255,7 @@ s3prf8 =
            joined = ruleJoin prf1 prf2
        in fromRight $ ruleDetachment prfAandBorC $ fromRight $ ruleDetachment joined prf
   in ruleFantasy f (Or (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<<A> \/ <B>> /\ <C>> -> <<<A> /\ <C>> \/ <<B> /\ <C>>>
+-- |- <A \/ B> /\ C -> A /\ C \/ B /\ C
 s3prf9 =
   let f prfAorBandC =
        let prfAorB = fromRight $ ruleSepL prfAorBandC
@@ -219,35 +277,11 @@ s3prf9 =
            joined = ruleJoin prf1 prf2
            in fromRight $ ruleDetachment prfAorB $ fromRight $ ruleDetachment joined prf
   in ruleFantasy f (And (Or (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
--- |- <<<A> \/ <B>> /\ <<<A> -> <C>> /\ <<B> -> <C>>>> -> <C>
+-- |- <A -> C> /\ <B -> C> -> A \/ B -> C
 s3prf10 = s3lemma3 (PropVar $ Var A) (PropVar $ Var B) (PropVar $ Var C)
--- |- <<<A> \/ <B>> -> <C>> -> <<<A> -> <C>> /\ <<B> -> <C>>>
-s3prf11 =
-  let f prfAorBimpC =
-       let step1 = applyPropRule [GoLeft] ruleDoubleTildeIntro prfAorBimpC
-           step2 = applyPropRule [GoLeft,GoLeft] (fromRight . ruleDeMorgan) step1
-           prfnotAandnotBorC = fromRight $ ruleSwitcheroo step2
-           prf = s3lemma3 (And (Not (PropVar $ Var A)) (Not (PropVar $ Var B))) (PropVar $ Var C) (And (Imp (PropVar (Var A)) (PropVar (Var C))) (Imp (PropVar (Var B)) (PropVar (Var C))))
-           prf1 =
-            let f' prfnotAandnotB =
-                 let prfnotA = fromRight $ ruleSepL prfnotAandnotB
-                     prfnotB = fromRight $ ruleSepR prfnotAandnotB
-                     prfnotCimpnotA = ruleFantasy (\_ -> prfnotA) (Not (PropVar (Var C)))
-                     prfnotBimpnotA = ruleFantasy (\_ -> prfnotB) (Not (PropVar (Var C)))
-                     prfAimpC = fromRight $ ruleContra prfnotCimpnotA
-                     prfBimpC = fromRight $ ruleContra prfnotBimpnotA
-                     in ruleJoin prfAimpC prfBimpC
-                in ruleFantasy f' (And (Not (PropVar $ Var A)) (Not (PropVar $ Var B)))
-           prf2 =
-            let f' prfC =
-                 let prfCAimpC = ruleFantasy (\_ -> prfC) (PropVar (Var A))
-                     prfCBimpC = ruleFantasy (\_ -> prfC) (PropVar (Var B))
-                     in ruleJoin prfCAimpC prfCBimpC
-                in ruleFantasy f' (PropVar $ Var C)
-           joined = ruleJoin prf1 prf2
-       in fromRight $ ruleDetachment prfnotAandnotBorC $ fromRight $ ruleDetachment joined prf
-  in ruleFantasy f (Imp (Or (PropVar $ Var A) (PropVar $ Var B)) (PropVar $ Var C))
--- |- <<<A> -> <B>> \/ <<A> -> <C>>> -> <<A> -> <<B> \/ <C>>>
+-- |- <A \/ B -> C> -> <A -> C> /\ <B -> C>
+s3prf11 = s3lemma4 (PropVar (Var A)) (PropVar (Var B)) (PropVar (Var C))
+-- |- <A -> B> \/ <A -> C> -> A -> B \/ C
 s3prf12 =
   let f prfAimpBorAimpC =
        let f' prfA =
@@ -271,7 +305,9 @@ s3prf12 =
   in ruleFantasy f (Or (Imp (PropVar $ Var A) (PropVar $ Var B)) (Imp (PropVar $ Var A) (PropVar $ Var C)))
 
 -- | Session 4
--- |- <<x> /\ <~x>> -> <y>
+-- The following identity is used: E /\ ~E = bottom
+
+-- |- x /\ ~x -> y
 s4lemma1 x y =
   let f premise =
        let left = fromRight $ ruleSepL premise
@@ -283,9 +319,96 @@ s4lemma1 x y =
              in step2
        in fromRight $ ruleDetachment right prfImp
   in ruleFantasy f (bottom x)
+-- |- x \/ (x -> Bottom)
+s4lemma2 x =
+  let
+      prfAornotA = fromRight $ exclMiddle x
+      prf = s3lemma3 x (Not x) (Or x (Imp x (bottom (PropVar (Var E)))))
+      prf1 = s3lemma1 x (Imp x (bottom (PropVar (Var E))))
+      prf2 = ruleFantasy f' (Not x)
+          where
+          f' prfNotx = prfAorAtoBottom
+            where
+            f'' prfx = fromRight $ ruleDetachment (ruleJoin prfx prfNotx) (s4lemma1 x (bottom (PropVar (Var E))))
+            prfAtoBottom = ruleFantasy f'' x
+            prfAtoBottomorA = fromRight $ ruleDetachment prfAtoBottom $ s3lemma1 (Imp x (bottom (PropVar (Var E)))) x
+            prfAorAtoBottom = fromRight $ ruleDetachment prfAtoBottomorA $ s3lemma2 (Imp x (bottom (PropVar (Var E)))) x
+      joined = ruleJoin prf1 prf2
+  in fromRight $ ruleDetachment prfAornotA $ fromRight $ ruleDetachment joined prf
 
--- |- <<A> /\ <~A>> -> <A>
-s4prf1 = s4lemma1 (PropVar $ Var A) (PropVar $ Var A)
+-- |- E /\ ~E -> A
+s4prf1 = s4lemma1 (PropVar $ Var E) (PropVar $ Var A)
+s4prf2 = s4lemma1 (PropVar $ Var E) (PropVar $ Var A)
+s4prf2_2 = s4lemma1 (PropVar $ Var E) (PropVar $ Var B)
+s4prf3 = applyPropRule [GoRight] (\prf -> fromRight $ ruleDetachment prf $ s3lemma2 (PropVar (Var A)) (bottom (PropVar (Var E)))) (s3lemma1 (PropVar (Var A)) (bottom (PropVar (Var E))))
+s4prf4 =
+  let f prfBottomorA =
+       let prf = s3lemma3 (bottom (PropVar (Var E))) (PropVar (Var A)) (PropVar (Var A))
+           prfBottomtoA = s4lemma1 (PropVar (Var E)) (PropVar (Var A))
+           prf1 = ruleFantasy (\x ->fromRight $ ruleDetachment x prfBottomtoA) (bottom (PropVar (Var E)))
+           prf2 = ruleFantasy id (PropVar (Var A))
+           joined = ruleJoin prf1 prf2
+       in fromRight $ ruleDetachment prfBottomorA $ fromRight $ ruleDetachment joined prf
+  in ruleFantasy f (Or (bottom (PropVar (Var E))) (PropVar (Var A)))
+s4prf5 = ruleFantasy (fromRight . ruleSepL) (And (bottom (PropVar (Var E))) (PropVar (Var A)))
+s4prf6 = s4prf1
+s4prf7 =
+  let f prfAtoB =
+       let f' prfBtoBottom =
+            let f'' prfA =
+                 let prfB = fromRight $ ruleDetachment prfA prfAtoB
+                     prfBottom = fromRight $ ruleDetachment prfB prfBtoBottom
+                 in prfBottom
+            in ruleFantasy f'' (PropVar (Var A))
+       in ruleFantasy f' (Imp (PropVar (Var B)) (bottom (PropVar (Var E))))
+  in ruleFantasy f (Imp (PropVar (Var A)) (PropVar (Var B)))
+s4prf8 = s3lemma4 (PropVar (Var A)) (PropVar (Var B)) (bottom (PropVar (Var E)))
+s4prf9 = s3lemma3 (PropVar (Var A)) (PropVar (Var B)) (bottom (PropVar (Var E)))
+s4prf10 =
+  let f prfAimpBottomorBimpBottom =
+       let prf = s3lemma3 (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (Imp (PropVar (Var B)) (bottom (PropVar (Var E)))) (Imp (And (PropVar (Var A)) (PropVar (Var B))) (bottom (PropVar (Var E))))
+           prf1 = ruleFantasy (\prfAimpBottom -> ruleFantasy (\prfAB -> let prfA = fromRight $ ruleSepL prfAB in fromRight $ ruleDetachment prfA prfAimpBottom) (And (PropVar (Var A)) (PropVar (Var B)))) (Imp (PropVar (Var A)) (bottom (PropVar (Var E))))
+           prf2 = ruleFantasy (\prfBimpBottom -> ruleFantasy (\prfAB -> let prfB = fromRight $ ruleSepR prfAB in fromRight $ ruleDetachment prfB prfBimpBottom) (And (PropVar (Var A)) (PropVar (Var B)))) (Imp (PropVar (Var B)) (bottom (PropVar (Var E))))
+           joined = ruleJoin prf1 prf2
+       in fromRight $ ruleDetachment prfAimpBottomorBimpBottom $ fromRight $ ruleDetachment joined prf
+  in ruleFantasy f (Or (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (Imp (PropVar (Var B)) (bottom (PropVar (Var E)))))
+s4prf11 =
+  let f imp =
+       let f' prfA =
+            let f'' prfAtoBottom = fromRight $ ruleDetachment prfA prfAtoBottom
+                prfAtoBottomtoBottom = ruleFantasy f'' (Imp (PropVar (Var A)) (bottom (PropVar (Var E))))
+            in fromRight $ ruleDetachment prfAtoBottomtoBottom imp
+       in ruleFantasy f' (PropVar (Var A))
+  in ruleFantasy f (Imp (Imp (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (bottom (PropVar (Var E)))) (bottom (PropVar (Var E))))
+s4prf12 = ruleFantasy f (Or (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (PropVar (Var B)))
+  where
+  f prf = ruleFantasy (f' prf) (PropVar (Var A))
+  f' prfAtoBottomorB prfA =
+    let prf = s3lemma3 (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (PropVar (Var B)) (PropVar (Var B))
+        prf1 = ruleFantasy f''' (Imp (PropVar (Var A)) (bottom (PropVar (Var E))))
+          where
+          f''' prfAtoBottom = fromRight $ ruleDetachment (fromRight $ ruleDetachment prfA prfAtoBottom) (s4lemma1 (PropVar $ Var E) (PropVar $ Var B))
+        prf2 = ruleFantasy id (PropVar (Var B))
+        joined = ruleJoin prf1 prf2
+    in fromRight $ ruleDetachment prfAtoBottomorB $ fromRight $ ruleDetachment joined prf
+s4prf13 = ruleFantasy f (And (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (Imp (PropVar (Var B)) (PropVar (Var A))))
+  where
+  f prfAtoBottomBtoA =
+    let prfAtoBottom = fromRight $ ruleSepL prfAtoBottomBtoA
+        prfBtoA      = fromRight $ ruleSepR prfAtoBottomBtoA
+    in ruleFantasy (\prfB -> let prfA = fromRight $ ruleDetachment prfB prfBtoA in fromRight $ ruleDetachment prfA prfAtoBottom) (PropVar (Var B))
+s4prf14 =
+  let f prfAimpBottomorBimpBottom =
+       let prf = s3lemma3_2 (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (Imp (PropVar (Var B)) (bottom (PropVar (Var E)))) (Imp (PropVar (Var C)) (bottom (PropVar (Var E)))) (Imp (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C))) (bottom (PropVar (Var E))))
+           prf1 = ruleFantasy (\prfAimpBottom -> ruleFantasy (\prfABC -> let prfA = fromRight $ ruleSepL $ fromRight $ ruleSepL prfABC in fromRight $ ruleDetachment prfA prfAimpBottom) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))) (Imp (PropVar (Var A)) (bottom (PropVar (Var E))))
+           prf2 = ruleFantasy (\prfBimpBottom -> ruleFantasy (\prfABC -> let prfB = fromRight $ ruleSepR $ fromRight $ ruleSepL prfABC in fromRight $ ruleDetachment prfB prfBimpBottom) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))) (Imp (PropVar (Var B)) (bottom (PropVar (Var E))))
+           prf3 = ruleFantasy (\prfBimpBottom -> ruleFantasy (\prfABC -> let prfB = fromRight $ ruleSepR prfABC in fromRight $ ruleDetachment prfB prfBimpBottom) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))) (Imp (PropVar (Var C)) (bottom (PropVar (Var E))))
+           joined = ruleJoin (ruleJoin prf1 prf2) prf3
+       in fromRight $ ruleDetachment prfAimpBottomorBimpBottom $ fromRight $ ruleDetachment joined prf
+  in ruleFantasy f (Or (Or (Imp (PropVar (Var A)) (bottom (PropVar (Var E)))) (Imp (PropVar (Var B)) (bottom (PropVar (Var E))))) (Imp (PropVar (Var C)) (bottom (PropVar (Var E)))))
+s4prf15 = ruleFantasy f (Imp (Or (PropVar (Var A)) (Imp (PropVar (Var A)) (bottom (PropVar (Var E))))) (bottom (PropVar (Var E))))
+  where
+  f prfAorAtoBottomtoBottom = fromRight $ ruleDetachment (s4lemma2 (PropVar (Var A))) prfAorAtoBottomtoBottom
 
 -- | Hilbert system
 -- |- <<a> \/ <a>> -> <a>
