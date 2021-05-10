@@ -6,6 +6,18 @@ import Gentzen
 import PrettyPrinter
 import TNT
 
+main = do
+  putStrLn "Session 1"
+  mapM_ (putStrLn . pr) $ [s1prf1,s1prf2,s1prf3,s1prf3_2,s1prf4,s1prf5,s1prf6,s1prf7,s1prf7_2,s1prf8,s1prf9,s1prf10,s1prf10_2,s1prf10_3,s1prf11,s1prf12]
+  putStrLn "Session 2"
+  mapM_ (putStrLn . pr) $ [s2prf1,s2prf2,s2prf3,s2prf3,s2prf4,s2prf5,s2prf6,s2prf7,s2prf7,s2prf8,s2prf9,s2prf10,s2prf10,s2prf10,s2prf11,s2prf12,s2prf13,s2prf14]
+  putStrLn "Session 3"
+  mapM_ (putStrLn . pr) $ [s3prf1,s3prf2,s3prf3,s3prf3,s3prf4,s3prf5,s3prf6,s3prf7,s3prf7,s3prf8,s3prf9,s3prf10,s3prf10,s3prf10,s3prf11,s3prf12]
+  putStrLn "Session 4"
+  mapM_ (putStrLn . pr) $ [s4prf1,s4prf2,s4prf2_2,s4prf3,s4prf3,s4prf4,s4prf5,s4prf6,s4prf7,s4prf7,s4prf8,s4prf9,s4prf10,s4prf10,s4prf10,s4prf11,s4prf12,s4prf13,s4prf14,s4prf15]
+  putStrLn "Hilbert system"
+  mapM_ (putStrLn . pr) $ [hprf1,hprf2,hprf2,hprf3,hprf3,hprf4,hprf5,hprf6,hprf7,hprf7,hprf8,hprf9]
+
 -- Helpers
 -- |- x /\ ~x
 bottom x = And x (Not x)

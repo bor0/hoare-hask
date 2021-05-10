@@ -1,5 +1,4 @@
 module ExampleTNT2 where
---TODO: Rulegeneralize u proof probaj so applyFOLRule
 
 import Common
 import ExampleCommon
