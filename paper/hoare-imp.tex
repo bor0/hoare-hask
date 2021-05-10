@@ -1041,7 +1041,7 @@ $$\{\exists C: 0+C=B\} A \texttt{ := } 0 \texttt{; while } \neg(A = B) \texttt{ 
 
 Compile-time, run-time, etc. are all about having evaluations at different levels. There is still computation going on, but the computation strategies are different at various computation levels. A full evaluation of \texttt{Command} can be expensive, and sometimes even not terminate, and we wanted a way to deduce propositions without doing a full evaluation. We achieved this by providing an implementation of Hoare logic.
 
-The biggest disadvantage of the provided implementation is that we had to manually construct the proofs, which is a bit tedious; it feels like working with assembly/machine code. Ideally, we would rely on an automated theorem prover that would derive the necessary formulas automatically. Further, the underlying number-theoretical system uses Peano's axioms which is limited to natural numbers - we could extend it to integers for better expressibility. In addition, we could increase the expressiveness of the logical system by allowing user definitions to be added. Finally, we could add more commands to the imperative language and correspondingly, rules to the Hoare logic.
+The biggest disadvantage of the provided implementation is the manual construction of proofs, which is a bit tedious as it feels like working with machine code (one similar system is Metamath\cite{b9}). Ideally, we would rely on an automated theorem prover that would derive the necessary formulas. Further, the underlying number-theoretical system uses Peano's axioms which is limited to natural numbers - we could extend it to integers for better expressibility. In addition, we could increase the expressiveness of the logical system by allowing user definitions to be added. Finally, we could add more commands to the imperative language and correspondingly, rules to the Hoare logic.
 
 Even though the mathematical formulas for these systems look simple, implementing them is a different matter. Looking at the implementation, we see how complex the implementation details of these systems can get. Nevertheless, this introductory paper may serve as a good starting point toward building systems of similar nature.
 
@@ -1090,6 +1090,11 @@ Douglas Hofstadter
 Charles A.R. Hoare
 \newblock An axiomatic basis for computer programming
 \newblock {\em Communications of the ACM, 12(10), pp.576-580}, 1969.
+
+\bibitem{b9}
+Norman D. Megill, David A. Wheeler
+\newblock Metamath: A Computer Language for Pure Mathematics
+\newblock {\em Lulu Press}, 2019.
 
 \end{thebibliography}
 
