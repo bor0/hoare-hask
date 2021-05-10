@@ -49,7 +49,7 @@ instance Pretty a => Pretty (Arith a) where
   prPrec q (S a)       = prParen (q > 7) ("(",")") $ "S" ++ prPrec 7 a
 
 instance Pretty a => Pretty (FOL a) where
-  prPrec q (Eq a b)  = prParen (q > 4) ("(",")") $ prPrec 5 a ++ "=" ++ prPrec 4 b
+  prPrec q (Eq a b)     = prParen (q > 4) ("(",")") $ prPrec 5 a ++ "=" ++ prPrec 4 b
   prPrec q (ForAll x y) = prParen (q > 8) ("(",")") $ "All " ++ prPrec 9 x ++ ":" ++ prPrec 8 y
   prPrec q (Exists x y) = prParen (q > 9) ("(",")") $ "Exists " ++ prPrec 10 x ++ ":" ++ prPrec 9 y
 
@@ -205,9 +205,9 @@ axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Va
 
 -- | Rule of Specification
 -- Suppose u is a variable which occurs inside the string x. If the string ∀u:x is a theorem, then so is x, and so are any strings made from x by replacing u, wherever it occurs, by one and the same term. (Restriction: The term which replaces u must not contain any variable that is quantified in x.)
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
-ruleSpec (Proof (PropVar (ForAll x y))) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
-ruleSpec _ _ _ = Left "ruleSpec: Cannot construct proof"
+ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+ruleSpec (Proof (PropVar (ForAll x y))) e | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
+ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)

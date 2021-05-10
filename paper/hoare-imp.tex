@@ -326,9 +326,9 @@ getBoundVars x = nub $ go x where
 We are now able to implement \textbf{Rule of Specification}:
 
 \begin{lstlisting}
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
-ruleSpec (Proof (PropVar (ForAll x y))) v e | x == v && not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
-ruleSpec _ _ _ = Left "ruleSpec: Cannot construct proof"
+ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+ruleSpec (Proof (PropVar (ForAll x y))) e | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
+ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 \end{lstlisting}
 
 We can also implement \textbf{Rule of Generalization} as follows:
@@ -415,20 +415,20 @@ $\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
 -- |- All A:All B:(A+SB=S(A+B))
 let step1 = axiom3 A B
     -- |- All B:(D+SB=S(D+B))
-    step2 = fromRight $ ruleSpec step1 A (Var D)
+    step2 = fromRight $ ruleSpec step1 (Var D)
     -- |- D+SSC=S(D+SC)
-    step3 = fromRight $ ruleSpec step2 B (S (Var C))
+    step3 = fromRight $ ruleSpec step2 (S (Var C))
     -- |- All B:(SD+SB=S(SD+B))
-    step4 = fromRight $ ruleSpec step1 A (S (Var D))
+    step4 = fromRight $ ruleSpec step1 (S (Var D))
     -- |- SD+SC=S(SD+C)
-    step5 = fromRight $ ruleSpec step4 B (Var C)
+    step5 = fromRight $ ruleSpec step4 (Var C)
     -- |- S(SD+C)=SD+SC
     step6 = fromRight $ ruleSymmetry step5
     -- All D:(D+SC=SD+C)
     premise = PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))
     f premise =
      -- |- D+SC=SD+C
-     let step8 = fromRight $ ruleSpec premise D (Var D)
+     let step8 = fromRight $ ruleSpec premise (Var D)
          -- |- S(D+SC)=S(SD+C)
          step9 = fromRight $ ruleAddS step8
          -- |- D+SSC=S(SD+C)
@@ -450,21 +450,21 @@ $\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
 -- |- All A:All B:(A+SB=S(A+B))
 let step1 = axiom3 A B
     -- |- All B:(D+SB=S(D+B))
-    step2 = fromRight $ ruleSpec step1 A (Var D)
+    step2 = fromRight $ ruleSpec step1 (Var D)
     -- |- D+SSC=S(D+SC)
-    step3 = fromRight $ ruleSpec step2 B (S (Var C))
+    step3 = fromRight $ ruleSpec step2 (S (Var C))
     -- |- D+S0=S(D+0)
-    step4 = fromRight $ ruleSpec step2 B Z
+    step4 = fromRight $ ruleSpec step2 Z
     -- |- All A:(A+0=A)
     step5 = axiom2 A
     -- |- D+0=D
-    step6 = fromRight $ ruleSpec step5 A (Var D)
+    step6 = fromRight $ ruleSpec step5 (Var D)
     -- |- S(D+0)=SD
     step7 = fromRight $ ruleAddS step6
     -- |- D+S0=SD
     step8 = fromRight $ ruleTransitivity step4 step7
     -- |- SD+0=SD
-    step9 = fromRight $ ruleSpec step5 A (S (Var D))
+    step9 = fromRight $ ruleSpec step5 (S (Var D))
     -- |- SD=SD+0
     step10 = fromRight $ ruleSymmetry step9
     -- |- D+S0=SD+0
@@ -914,7 +914,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
-> let prf1 = ruleFantasy (\pq -> ruleJoin (fromRight $ ruleSpec (axiom1 A) A (Var A)) (fromRight $ ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let prf1 = ruleFantasy (\pq -> ruleJoin (fromRight $ ruleSpec (axiom1 A) (Var A)) (fromRight $ ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
 > let prf2 = ruleFantasy id $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0
@@ -1023,11 +1023,11 @@ pre = ruleFantasy f premise where
     -- |- ~~Exists C:(A+C=B)
     step1 = ruleDoubleTildeIntro (fromRight $ ruleSepR premise)
     -- |- ~~A+SC=B
-    step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) C (S (Var C))) step1
+    step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) (S (Var C))) step1
     -- |- A+SC=B
     step3 = fromRight $ ruleDoubleTildeElim step2
     -- |- A+SC=SA+C
-    step4 = fromRight $ ruleSpec (fromRight $ ruleSpec theorem C (Var C)) D (Var A)
+    step4 = fromRight $ ruleSpec (fromRight $ ruleSpec theorem (Var C)) (Var A)
     -- |- SA+C=A+SC
     step5 = fromRight $ ruleSymmetry step4
     -- |- SA+C=B
