@@ -70,7 +70,7 @@ The syntax of the formal system expressed in BNF (Backus-Naur form) and in Haske
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
 prop   ::= bvar | prop brelop prop | unop prop
-bvar   ::= P | Q | R
+bvar   ::= A | B | C
 unop   ::= "!"
 brelop ::= "&&" | "||" | "->"
 \end{lstlisting}
@@ -78,7 +78,7 @@ brelop ::= "&&" | "||" | "->"
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
 data PropCalc =
-  P | Q | R
+  A | B | C
   | Not PropCalc
   | And PropCalc PropCalc
   | Or PropCalc PropCalc
@@ -97,7 +97,7 @@ data PropCalc a =
   | Imp (PropCalc a) (PropCalc a)
 \end{lstlisting}
 
-We now have a way to represent some logical formulas, e.g. $A \land B$ as \texttt{And (PropVar P) (PropVar Q)}.
+We now have a way to represent some logical formulas, e.g. $A \land B$ as \texttt{And (PropVar A) (PropVar B)}.
 
 We also need a way to differentiate between well-formed formulas and theorems since not all well-formed formulas are theorems. For that, we provide the \texttt{Proof} data type constructor:
 
@@ -108,7 +108,7 @@ fromProof :: Proof a -> a
 fromProof (Proof a) = a
 \end{lstlisting}
 
-Note that \texttt{Proof \$ And (PropVar P) (PropVar Q)} is different from \texttt{And (PropVar P) (PropVar Q)}. However, the constructor mustn't be used directly; proofs should only be constructed given the rules that we provide next.
+Note that \texttt{Proof \$ And (PropVar A) (PropVar B)} is different from \texttt{And (PropVar A) (PropVar B)}. However, the constructor mustn't be used directly; proofs should only be constructed given the rules that we provide next.
 
 \subsection{Rules}
 
@@ -141,7 +141,7 @@ ruleSepR (Proof (And x y)) = Right $ Proof y
 ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 \end{lstlisting}
 
-That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms. 
+That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms.
 
 Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
 
@@ -177,7 +177,7 @@ ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 \end{lstlisting}
 \end{minipage}
 
-However, in the current implementation, we can't apply a rule to e.g. $R$ within $P \land (Q \lor R)$, because it only accepts a full formula and doesn't know how to do replacements in its subformulas. To address this, we create a function that accepts a "path" (which subformula to apply it to), what rule should be applied, and the formula itself.
+However, in the current implementation, we can't apply a rule to e.g. $B$ within $A \land (A \lor B)$, because it only accepts a full formula and doesn't know how to do replacements in its subformulas. To address this, we create a function that accepts a "path" (which subformula to apply it to), what rule should be applied, and the formula itself.
 
 \begin{lstlisting}
 data Pos = GoLeft | GoRight
@@ -199,11 +199,11 @@ applyPropRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x w
 
 Of course, going left or right doesn't make much sense for unary operators, so the implementation will just drill down in the \texttt{Not} operator if it finds either a left or a right. But, going left or right does make sense for binary operators - we drill on the left and the right argument respectively.
 
-Now we can use this to apply \textbf{Double-Tilde Rule} to $R$ within $P \land (Q \lor R)$ as follows:
+Now we can use this to apply \textbf{Double-Tilde Rule} to $B$ within $A \land (A \lor B)$ as follows:
 
 \begin{lstlisting}
-> putStrLn $ pr $ ruleFantasy (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro) (And (PropVar A) (Or (PropVar B) (PropVar C)))
-|- A /\ <B \/ C> -> A /\ <B \/ ~~C>
+> putStrLn $ pr $ ruleFantasy (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro) (And (PropVar A) (Or (PropVar A) (PropVar B)))
+|- A /\ <A \/ B> -> A /\ <A \/ ~~B>
 \end{lstlisting}
 
 \section{Number theory}
@@ -244,7 +244,7 @@ data Arith a =
   | Mult (Arith a) (Arith a)
 \end{lstlisting}
 
-For example, we can now represent $0 + 1 \cdot X$ as \texttt{Plus Z (Mult (S Z) (Var X))}.
+For example, we can now represent $0 + 1 \cdot A$ as \texttt{Plus Z (Mult (S Z) (Var A))}.
 
 The next step is to implement the components from first-order logic (quantifiers and arithmetic equations).
 
@@ -787,7 +787,7 @@ We list the rules of Hoare logic, some of which are outlined in the original pap
 
 \subsection{Implementation}
 
-We represent the Hoare triple as a product of a \texttt{Command a} and the two conditions as \texttt{PropCalc (FOL a)}. As before, triples should not be constructed using \texttt{HoareTriple}, rather through the rules that we provide next.
+We represent the Hoare triple as a product of \texttt{Command a}, and the two conditions as \texttt{PropCalc (FOL a)}. As before, triples should not be constructed using \texttt{HoareTriple}, rather through the rules that we provide next.
 
 \begin{lstlisting}
 data HoareTriple a = HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
