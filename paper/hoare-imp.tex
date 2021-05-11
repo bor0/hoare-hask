@@ -390,20 +390,20 @@ ruleInduction _ _ = Left "ruleInduction: Cannot construct proof"
 Finally, we now encode Peano's axioms as follows:
 
 \begin{lstlisting}
--- Peano axiom 1: forall a, not (S a = 0)
-axiom1 a = Proof $ PropVar (ForAll a (Not (PropVar (Eq (S (Var a)) Z))))
+axiom1 (Var a) = Right $ Proof $ PropVar (ForAll a (Not (PropVar (Eq (S (Var a)) Z))))
+axiom1 _ = Left "axiom1: Cannot construct proof"
 
--- Peano axiom 2: forall a, (a + 0) = a
-axiom2 a = Proof $ PropVar (ForAll a (PropVar (Eq (Plus (Var a) Z) (Var a))))
+axiom2 (Var a) = Right $ Proof $ PropVar (ForAll a (PropVar (Eq (Plus (Var a) Z) (Var a))))
+axiom2 _ = Left "axiom2: Cannot construct proof"
 
--- Peano axiom 3: forall a, forall b, a + Sb = S(a + b)
-axiom3 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Plus (Var a) (S (Var b))) (S (Plus (Var a) (Var b))))))))
+axiom3 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Plus (Var a) (S (Var b))) (S (Plus (Var a) (Var b))))))))
+axiom3 _ _ = Left "axiom3: Cannot construct proof"
 
--- Peano axiom 4: forall a, (a * 0) = 0
-axiom4 a = Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
+axiom4 (Var a) = Right $ Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
+axiom4 _ = Left "axiom4: Cannot construct proof"
 
--- Peano axiom 5: forall a, forall b, a * Sb = (a * b + a)
-axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
+axiom5 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
+axiom5 _ _ = Left "axiom5: Cannot construct proof"
 \end{lstlisting}
 
 With a few example proofs:
@@ -413,7 +413,7 @@ $\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
 
 \begin{lstlisting}
 -- |- All A:All B:(A+SB=S(A+B))
-let step1 = axiom3 A B
+let step1 = fromRight $ axiom3 (Var A) (Var B)
     -- |- All B:(D+SB=S(D+B))
     step2 = fromRight $ ruleSpec step1 (Var D)
     -- |- D+SSC=S(D+SC)
@@ -448,7 +448,7 @@ $\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
 
 \begin{lstlisting}
 -- |- All A:All B:(A+SB=S(A+B))
-let step1 = axiom3 A B
+let step1 = fromRight $ axiom3 (Var A) (Var B)
     -- |- All B:(D+SB=S(D+B))
     step2 = fromRight $ ruleSpec step1 (Var D)
     -- |- D+SSC=S(D+SC)
@@ -456,7 +456,7 @@ let step1 = axiom3 A B
     -- |- D+S0=S(D+0)
     step4 = fromRight $ ruleSpec step2 Z
     -- |- All A:(A+0=A)
-    step5 = axiom2 A
+    step5 = fromRight $ axiom2 (Var A)
     -- |- D+0=D
     step6 = fromRight $ ruleSpec step5 (Var D)
     -- |- S(D+0)=SD
@@ -914,7 +914,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
-> let prf1 = ruleFantasy (\pq -> ruleJoin (fromRight $ ruleSpec (axiom1 A) (Var A)) (fromRight $ ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let prf1 = ruleFantasy (\pq -> ruleJoin (fromRight $ ruleSpec (fromRight $ axiom1 (Var A)) (Var A)) (fromRight $ ruleSepR pq)) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
 > let prf2 = ruleFantasy id $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0

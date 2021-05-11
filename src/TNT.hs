@@ -181,25 +181,30 @@ getFreeVars x = getVars x \\ getBoundVars x
 
 {- Axioms -}
 
--- | Peano axiom 1
--- forall a, not (S a = 0)
-axiom1 a = Proof $ PropVar (ForAll a (Not (PropVar (Eq (S (Var a)) Z))))
+-- | Peano axiom 1: forall a, not (S a = 0)
+axiom1 :: Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom1 (Var a) = Right $ Proof $ PropVar (ForAll a (Not (PropVar (Eq (S (Var a)) Z))))
+axiom1 _ = Left "axiom1: Cannot construct proof"
 
--- | Peano axiom 2
--- forall a, (a + 0) = a
-axiom2 a = Proof $ PropVar (ForAll a (PropVar (Eq (Plus (Var a) Z) (Var a))))
+-- | Peano axiom 2: forall a, (a + 0) = a
+axiom2 :: Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom2 (Var a) = Right $ Proof $ PropVar (ForAll a (PropVar (Eq (Plus (Var a) Z) (Var a))))
+axiom2 _ = Left "axiom2: Cannot construct proof"
 
--- | Peano axiom 3
--- forall a, forall b, a + Sb = S(a + b)
-axiom3 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Plus (Var a) (S (Var b))) (S (Plus (Var a) (Var b))))))))
+-- | Peano axiom 3: forall a, forall b, a + Sb = S(a + b)
+axiom3:: Arith a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom3 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Plus (Var a) (S (Var b))) (S (Plus (Var a) (Var b))))))))
+axiom3 _ _ = Left "axiom3: Cannot construct proof"
 
--- | Peano axiom 4
--- forall a, (a * 0) = 0
-axiom4 a = Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
+-- | Peano axiom 4: forall a, (a * 0) = 0
+axiom4 :: Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom4 (Var a) = Right $ Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
+axiom4 _ = Left "axiom4: Cannot construct proof"
 
--- | Peano axiom 5
--- forall a, forall b, a * Sb = (a * b + a)
-axiom5 a b = Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
+-- | Peano axiom 5: forall a, forall b, a * Sb = (a * b + a)
+axiom5 :: Arith a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom5 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
+axiom5 _ _ = Left "axiom5: Cannot construct proof"
 
 {- Rules -}
 

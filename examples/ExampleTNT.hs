@@ -8,7 +8,7 @@ import TNT
 
 lemma1 =
   -- |- All A:All B:(A+SB=S(A+B))
-  let step1 = axiom3 A B
+  let step1 = fromRight $ axiom3 (Var A) (Var B)
       -- |- All B:(D+SB=S(D+B))
       step2 = fromRight $ ruleSpec step1 (Var D)
       -- |- D+SSC=S(D+SC)
@@ -39,7 +39,7 @@ lemma1 =
 
 lemma2 =
   -- |- All A:All B:(A+SB=S(A+B))
-  let step1 = axiom3 A B
+  let step1 = fromRight $ axiom3 (Var A) (Var B)
       -- |- All B:(D+SB=S(D+B))
       step2 = fromRight $ ruleSpec step1 (Var D)
       -- |- D+SSC=S(D+SC)
@@ -47,7 +47,7 @@ lemma2 =
       -- |- D+S0=S(D+0)
       step4 = fromRight $ ruleSpec step2 Z
       -- |- All A:(A+0=A)
-      step5 = axiom2 A
+      step5 = fromRight $ axiom2 (Var A)
       -- |- D+0=D
       step6 = fromRight $ ruleSpec step5 (Var D)
       -- |- S(D+0)=SD

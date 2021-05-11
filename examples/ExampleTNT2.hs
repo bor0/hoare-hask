@@ -14,7 +14,7 @@ main = do
 
 {- Prop1 -}
 -- |- 0=0+0
-prop1base = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (axiom2 A) Z
+prop1base = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) Z
 
 -- |- All A:<A=0+A -> SA=0+SA>
 prop1hyp = fromRight $ ruleGeneralize specific A Nothing
@@ -24,7 +24,7 @@ prop1hyp = fromRight $ ruleGeneralize specific A Nothing
        -- |- A=0+A -> SA=S(0+A)
    let eq1 = fromRight $ ruleAddS premise
        -- |- S(0+A)=0+SA
-       eq2 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) Z) (Var A)
+       eq2 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) Z) (Var A)
    in  fromRight $ ruleTransitivity eq1 eq2
 
 -- |- All A:(A=0+A)
@@ -34,9 +34,9 @@ prop1 = fromRight $ ruleInduction prop1base prop1hyp
 -- |- SA+0=S(A+0)
 prop2base =
   -- |- SA+0=SA
-  let eq1 = fromRight $ ruleSpec (axiom2 A) (S (Var A))
+  let eq1 = fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) (S (Var A))
       -- |- A+0=A
-      eq2 = fromRight $ ruleSpec (axiom2 A) (Var A)
+      eq2 = fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) (Var A)
       -- |- S(A+0)=SA
       eq2' = fromRight $ ruleAddS eq2
       -- |- SA=S(A+0)
@@ -49,13 +49,13 @@ prop2hyp = fromRight $ ruleGeneralize specific B Nothing
   specific = ruleFantasy f (PropVar (Eq (Plus (S (Var A)) (Var B)) (S (Plus (Var A) (Var B)))))
   f premise =
    -- |- SA+SB=S(SA+B)
-   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) (S (Var A))) (Var B)
+   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) (S (Var A))) (Var B)
        -- |- S(SA+B)=SS(A+B)
        eq2 = fromRight $ ruleAddS premise
        -- |- SA+SB=SS(A+B)
        eq3 = fromRight $ ruleTransitivity eq1 eq2
        -- |- A+SB=S(A+B)
-       eq4 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) (Var A)) (Var B)
+       eq4 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) (Var A)) (Var B)
        -- |- S(A+SB)=SS(A+B)
        eq4' = fromRight $ ruleAddS eq4
        -- |- SS(A+B)=S(A+SB)
@@ -111,7 +111,7 @@ prop3 = fromRight $ ruleGeneralize eq3 A Nothing
 -- |- A+0=0+A
 prop4base = fromRight $ ruleTransitivity eq1 eq2
   where
-  eq1 = fromRight $ ruleSpec (axiom2 A) (Var A)
+  eq1 = fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) (Var A)
   eq2 = fromRight $ ruleSpec prop1 (Var A)
 
 -- |- All B:<A+B=B+A -> A+SB=SB+A>
@@ -120,7 +120,7 @@ prop4hyp = fromRight $ ruleGeneralize specific B Nothing
   specific = ruleFantasy f (PropVar (Eq (Plus (Var A) (Var B)) (Plus (Var B) (Var A))))
   f premise =
    -- |- A+SB=S(A+B)
-   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) (Var A)) (Var B)
+   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) (Var A)) (Var B)
        -- |- S(A+B)=S(B+A)
        eq2 = fromRight $ ruleAddS premise
        -- |- A+SB=S(B+A)
@@ -143,13 +143,13 @@ prop4 = eq2
 prop5base = fromRight $ ruleTransitivity eq3 eq4
   where
   -- |- B+0=B
-  eq1 = fromRight $ ruleSpec (axiom2 B) (Var B)
+  eq1 = fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) (Var B)
   -- |- B+0=B -> A+B+0=A+B
   eq2 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var A)) (Plus (Var B) Z)) (Var B)
   -- |- A+B+0=A+B
   eq3 = fromRight $ ruleDetachment eq1 eq2
   -- |- A+B=(A+B)+0
-  eq4 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (axiom2 A) (Plus (Var A) (Var B))
+  eq4 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) (Plus (Var A) (Var B))
   -- |- A+B+0=(A+B)+0
   eq5 = fromRight $ ruleTransitivity eq3 eq4
 
@@ -159,7 +159,7 @@ prop5hyp = fromRight $ ruleGeneralize specific C Nothing
   specific = ruleFantasy f (PropVar (Eq (Plus (Var A) (Plus (Var B) (Var C))) (Plus (Plus (Var A) (Var B)) (Var C))))
   f premise =
    -- |- B+SC=S(B+C)
-   let eq1 = fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (axiom3 A B)) (Var B)
+   let eq1 = fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (fromRight $ axiom3 (Var A) (Var B))) (Var B)
        -- |- B=S(D+C) -> A+B=A+S(D+C)
        eq2 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var A)) (Var E)) (S (Plus (Var D) (Var C)))
        -- |- B+SC=S(D+C) -> A+B+SC=A+S(D+C)
@@ -169,7 +169,7 @@ prop5hyp = fromRight $ ruleGeneralize specific C Nothing
        -- |- A+B+SC=A+S(B+C)
        eq3 = fromRight $ ruleDetachment eq1 eq2''
        -- |- A+S(B+C)=S(A+B+C)
-       eq4 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) (Var A)) (Plus (Var B) (Var C))
+       eq4 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) (Var A)) (Plus (Var B) (Var C))
        -- |- A+B+SC=S(A+B+C)
        eq5 = fromRight $ ruleTransitivity eq3 eq4
        -- |- S(A+B+C)=S((A+B)+C)
@@ -177,7 +177,7 @@ prop5hyp = fromRight $ ruleGeneralize specific C Nothing
        -- |- A+B+SC=S((A+B)+C)
        eq7 = fromRight $ ruleTransitivity eq5 eq6
        -- |- S((A+B)+C)=(A+B)+SC
-       eq8 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (axiom3 A B)) (Plus (Var A) (Var B))
+       eq8 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (fromRight $ axiom3 (Var A) (Var B))) (Plus (Var A) (Var B))
    in  fromRight $ ruleTransitivity eq7 eq8
 
 -- |- All A:All B:All C:(A+B+C=(A+B)+C)
@@ -190,7 +190,7 @@ prop5 = fromRight $ ruleGeneralize eq2 A Nothing
 
 {- Prop6 -}
 -- |- 0*0=0
-prop6base = fromRight $ ruleSpec (axiom4 A) Z
+prop6base = fromRight $ ruleSpec (fromRight $ axiom4 (Var A)) Z
 
 -- |- All A:<0*A=0 -> 0*SA=0>
 prop6hyp = fromRight $ ruleGeneralize specific A Nothing
@@ -198,11 +198,11 @@ prop6hyp = fromRight $ ruleGeneralize specific A Nothing
   specific = ruleFantasy f (PropVar (Eq (Mult Z (Var A)) Z))
   f premise =
    -- |- All B:(0*SB=0*B+0)
-   let eq1 = fromRight $ ruleSpec (axiom5 A B) Z
+   let eq1 = fromRight $ ruleSpec (fromRight $ axiom5 (Var A) (Var B)) Z
        -- |- 0*SA=0*A+0
        eq2 = fromRight $ ruleSpec eq1 (Var A)
        -- |- 0*A+0=0*A
-       eq3 = fromRight $ ruleSpec (axiom2 A) (Mult Z (Var A))
+       eq3 = fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) (Mult Z (Var A))
        -- |- 0*SA=0*A
        eq4 = fromRight $ ruleTransitivity eq2 eq3
    in  fromRight $ ruleTransitivity eq4 premise
@@ -214,13 +214,13 @@ prop6 = fromRight $ ruleInduction prop6base prop6hyp
 -- |- SA*0=A*0+0
 prop7base =
   -- |- SA*0=0
-  let eq1 = fromRight $ ruleSpec (axiom4 A) (S (Var A))
+  let eq1 = fromRight $ ruleSpec (fromRight $ axiom4 (Var A)) (S (Var A))
       -- |- 0=0+0
-      eq2 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (axiom2 A) Z
+      eq2 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ axiom2 (Var A)) Z
       -- |- SA*0=0+0
       eq2' = fromRight $ ruleTransitivity eq1 eq2
       -- |- A*0=0
-      eq3 = fromRight $ ruleSpec (axiom4 A) (Var A)
+      eq3 = fromRight $ ruleSpec (fromRight $ axiom4 (Var A)) (Var A)
       eq4 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 Z) (Mult (Var A) Z)) Z
       -- |- 0+0=0+A*0
       eq4' = fromRight $ ruleSymmetry $ fromRight $ ruleDetachment eq3 eq4
@@ -238,7 +238,7 @@ prop7hyp = fromRight $ ruleGeneralize specific B Nothing
   specific = ruleFantasy f (PropVar (Eq (Mult (S (Var A)) (Var B)) (Plus (Mult (Var A) (Var B)) (Var B))))
   f premise = -- | SA*B=A*B+B
    -- |- SA*SB=SA*B+SA
-   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom5 A B) (S (Var A))) (Var B)
+   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom5 (Var A) (Var B)) (S (Var A))) (Var B)
        -- |- SA*B+SA=SA+SA*B
        eq2 = fromRight $ ruleSpec (fromRight $ ruleGeneralize (fromRight $ ruleSpec (fromRight $ ruleSpec prop4 (Var D)) (S (Var A))) D (Just premise)) (Mult (S (Var A)) (Var B))
        eq2' = fromRight $ ruleTransitivity eq1 eq2
@@ -255,7 +255,7 @@ prop7hyp = fromRight $ ruleGeneralize specific B Nothing
        -- |- SA*SB=A*B+B+SA
        eq8 = fromRight $ ruleTransitivity eq6 eq7
        -- |- B+SA=S(B+A)
-       eq9 = fromRight $ ruleSpec (fromRight $ ruleGeneralize (fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) (Var D)) (Var A)) D (Just premise)) (Var B)
+       eq9 = fromRight $ ruleSpec (fromRight $ ruleGeneralize (fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) (Var D)) (Var A)) D (Just premise)) (Var B)
        -- |- B+SA=S(B+A) -> SA+B+SA=SA+S(B+A)
        eq9' = fromRight $ ruleSpec (fromRight $ ruleGeneralize (fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var D)) (Plus (Var B) (S (Var A)))) (S (Plus (Var B) (Var A)))) D (Just premise)) (Mult (Var A) (Var B))
        -- |- A*B+B+SA=A*B+S(B+A)
@@ -271,7 +271,7 @@ prop7hyp = fromRight $ ruleGeneralize specific B Nothing
        -- |- SA*SB=A*B+S(A+B)
        eq12 = fromRight $ ruleTransitivity eq10 eq11''
        -- |- A+SB=S(A+B)
-       eq13 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom3 A B) (Var A)) (Var B)
+       eq13 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom3 (Var A) (Var B)) (Var A)) (Var B)
        -- |- S(B+A)=S(A+B) -> A*B+S(B+A)=A*B+S(A+B)
        eq13' = fromRight $ ruleSpec (fromRight $ ruleGeneralize (fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var D)) (Plus (Var A) (S (Var B)))) (S (Plus (Var A) (Var B)))) D (Just premise)) (Mult (Var A) (Var B))
        -- |- A*B+S(A+B)=A*B+A+SB
@@ -282,7 +282,7 @@ prop7hyp = fromRight $ ruleGeneralize specific B Nothing
        -- |- SA*SB=(A*B+A)+SB
        eq16 = fromRight $ ruleTransitivity eq14 eq15
        -- |- A*SB=A*B+A
-       eq17 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom5 A B) (Var A)) (Var B)
+       eq17 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom5 (Var A) (Var B)) (Var A)) (Var B)
        -- |- A*SB=A*B+A -> SB+A*SB=SB+A*B+A
        eq17' = fromRight $ ruleSpec (fromRight $ ruleGeneralize (fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var D)) (Mult (Var A) (S (Var B)))) (Plus (Mult (Var A) (Var B)) (Var A))) D (Just premise)) (S (Var B))
        -- |- SB+A*SB=SB+A*B+A
@@ -303,7 +303,7 @@ prop7 = fromRight $ ruleGeneralize (fromRight $ ruleInduction prop7base prop7hyp
 -- |- A*0=0*A
 prop8base = fromRight $ ruleTransitivity eq1 eq2
   where
-  eq1 = fromRight $ ruleSpec (axiom4 A) (Var A)
+  eq1 = fromRight $ ruleSpec (fromRight $ axiom4 (Var A)) (Var A)
   eq2 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec prop6 (Var A)
 
 -- |- All B:<A*B=B*A -> A*SB=SB*A>
@@ -312,7 +312,7 @@ prop8hyp = fromRight $ ruleGeneralize specific B Nothing
   specific = ruleFantasy f (PropVar (Eq (Mult (Var A) (Var B)) (Mult (Var B) (Var A))))
   f premise =
    -- |- A*SB=A*B+A
-   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (axiom5 A B) (Var A)) (Var B)
+   let eq1 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ axiom5 (Var A) (Var B)) (Var A)) (Var B)
        -- |- A*B=B*A -> A+A*B=A+B*A
        eq2 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var A)) (Mult (Var A) (Var B))) (Mult (Var B) (Var A))
        -- |- A+A*B=A+B*A
