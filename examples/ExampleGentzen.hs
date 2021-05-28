@@ -57,6 +57,21 @@ s1prf7_2 = ruleFantasy (fromRight . ruleSepR) (And (PropVar (Var A)) (PropVar (V
 s1prf8 = ruleFantasy id (And (PropVar (Var A)) (PropVar (Var B)))
 -- |- A /\ B -> B /\ A
 s1prf9 = ruleFantasy (\prfAB -> ruleJoin (fromRight $ ruleSepR prfAB) (fromRight $ ruleSepL prfAB)) (And (PropVar (Var A)) (PropVar (Var B)))
+-- |- <A /\ B -> A> -> <A /\ B -> B> -> <B -> A -> B /\ A> -> A /\ B -> B /\ A, tedious, but only relies on impl intro and impl elim
+s1prf9' =
+  ruleFantasy f (Imp (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var A)))
+  where
+  f ruleSepL = ruleFantasy f' (Imp (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var B)))
+    where
+    f' ruleSepR = ruleFantasy f'' (Imp (PropVar (Var B)) (Imp (PropVar (Var A)) (And (PropVar (Var B)) (PropVar (Var A)))))
+      where
+      f'' prfAtoBtoAandB = ruleFantasy f''' (And (PropVar (Var A)) (PropVar (Var B)))
+        where
+        f''' prfAandB =
+         let prfA = fromRight $ ruleDetachment prfAandB ruleSepL
+             prfB = fromRight $ ruleDetachment prfAandB ruleSepR
+             prfBandA = fromRight $ ruleDetachment prfA $ fromRight $ ruleDetachment prfB prfAtoBtoAandB
+         in  prfBandA
 -- |- <A /\ B> /\ C -> A
 s1prf10 = ruleFantasy (\prfABC -> fromRight $ ruleSepL $ fromRight $ ruleSepL prfABC) (And (And (PropVar (Var A)) (PropVar (Var B))) (PropVar (Var C)))
 -- |- <A /\ B> /\ C -> B
