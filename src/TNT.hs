@@ -57,6 +57,7 @@ instance Pretty a => Pretty (FOL a) where
 
 -- | Apply FOL rule to a specific portion of a formula
 -- Might be useful for some rules that may require drilling, like `ruleInterchangeL`
+-- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed.
 applyFOLRule :: Path -> (Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
 applyFOLRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x
   where
