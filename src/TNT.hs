@@ -59,20 +59,20 @@ instance Pretty a => Pretty (FOL a) where
 -- Might be useful for some rules that may require drilling, like `ruleInterchangeL`
 -- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed on any variable which appeared bound in the context.
 applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a)) -> Maybe (Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a))
-applyFOLRule xs f (Proof x) nested = Proof $ go xs (\x -> fromProof $ f (Proof x)) x [] nested
+applyFOLRule xs f (Proof x) ctx = Proof $ go xs (\x -> fromProof $ f (Proof x)) x [] ctx
   where
   go :: Eq a => Path -> (PropCalc (FOL a) -> PropCalc (FOL a)) -> PropCalc (FOL a) -> [a] -> Maybe (Proof (PropCalc (FOL a))) -> PropCalc (FOL a)
-  go [] _ x boundVars (Just (Proof nested)) | any (`elem` boundVars) (getVars nested) = x
+  go [] _ x boundVars (Just (Proof ctx)) | any (`elem` boundVars) (getVars ctx) = x
   go [] f x _ _ = f x
-  go (_:xs) f (PropVar (ForAll x y)) boundVars nested = PropVar (ForAll x (go xs f y (x : boundVars) nested))
-  go (_:xs) f (PropVar (Exists x y)) boundVars nested = PropVar (Exists x (go xs f y (x : boundVars) nested))
-  go (_:xs) f (Not x) boundVars nested                = Not (go xs f x boundVars nested)
-  go (GoLeft:xs) f (And x y) boundVars nested         = And (go xs f x boundVars nested) y
-  go (GoLeft:xs) f (Imp x y) boundVars nested         = Imp (go xs f x boundVars nested) y
-  go (GoLeft:xs) f (Or x y) boundVars nested          = Or (go xs f x boundVars nested) y
-  go (GoRight:xs) f (And x y) boundVars nested        = And x (go xs f y boundVars nested)
-  go (GoRight:xs) f (Imp x y) boundVars nested        = Imp x (go xs f y boundVars nested)
-  go (GoRight:xs) f (Or x y) boundVars nested         = Or x (go xs f y boundVars nested)
+  go (_:xs) f (PropVar (ForAll x y)) boundVars ctx = PropVar (ForAll x (go xs f y (x : boundVars) ctx))
+  go (_:xs) f (PropVar (Exists x y)) boundVars ctx = PropVar (Exists x (go xs f y (x : boundVars) ctx))
+  go (_:xs) f (Not x) boundVars ctx                = Not (go xs f x boundVars ctx)
+  go (GoLeft:xs) f (And x y) boundVars ctx         = And (go xs f x boundVars ctx) y
+  go (GoLeft:xs) f (Imp x y) boundVars ctx         = Imp (go xs f x boundVars ctx) y
+  go (GoLeft:xs) f (Or x y) boundVars ctx          = Or (go xs f x boundVars ctx) y
+  go (GoRight:xs) f (And x y) boundVars ctx        = And x (go xs f y boundVars ctx)
+  go (GoRight:xs) f (Imp x y) boundVars ctx        = Imp x (go xs f y boundVars ctx)
+  go (GoRight:xs) f (Or x y) boundVars ctx         = Or x (go xs f y boundVars ctx)
   -- applyFOLRule does not work at the equational level
   go _ _ (PropVar (Eq x y)) _ _                       = PropVar (Eq x y)
 
