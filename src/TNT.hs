@@ -57,23 +57,24 @@ instance Pretty a => Pretty (FOL a) where
 
 -- | Apply FOL rule to a specific portion of a formula
 -- Might be useful for some rules that may require drilling, like `ruleInterchangeL`
--- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed.
-applyFOLRule :: Path -> (Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-applyFOLRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x
+-- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed on any variable which appeared bound in the context.
+applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a)) -> Maybe (Proof (PropCalc (FOL a))) -> Proof (PropCalc (FOL a))
+applyFOLRule xs f (Proof x) nested = Proof $ go xs (\x -> fromProof $ f (Proof x)) x [] nested
   where
-  go :: Path -> (PropCalc (FOL a) -> PropCalc (FOL a)) -> PropCalc (FOL a) -> PropCalc (FOL a)
-  go [] f x = f x
-  go (_:xs) f (PropVar (ForAll x y)) = PropVar (ForAll x (go xs f y))
-  go (_:xs) f (PropVar (Exists x y)) = PropVar (Exists x (go xs f y))
-  go (_:xs) f (Not x)                = Not (go xs f x)
-  go (GoLeft:xs) f (And x y)         = And (go xs f x) y
-  go (GoLeft:xs) f (Imp x y)         = Imp (go xs f x) y
-  go (GoLeft:xs) f (Or x y)          = Or (go xs f x) y
-  go (GoRight:xs) f (And x y)        = And x (go xs f y)
-  go (GoRight:xs) f (Imp x y)        = Imp x (go xs f y)
-  go (GoRight:xs) f (Or x y)         = Or x (go xs f y)
+  go :: Eq a => Path -> (PropCalc (FOL a) -> PropCalc (FOL a)) -> PropCalc (FOL a) -> [a] -> Maybe (Proof (PropCalc (FOL a))) -> PropCalc (FOL a)
+  go [] _ x boundVars (Just (Proof nested)) | any (`elem` boundVars) (getVars nested) = x
+  go [] f x _ _ = f x
+  go (_:xs) f (PropVar (ForAll x y)) boundVars nested = PropVar (ForAll x (go xs f y (x : boundVars) nested))
+  go (_:xs) f (PropVar (Exists x y)) boundVars nested = PropVar (Exists x (go xs f y (x : boundVars) nested))
+  go (_:xs) f (Not x) boundVars nested                = Not (go xs f x boundVars nested)
+  go (GoLeft:xs) f (And x y) boundVars nested         = And (go xs f x boundVars nested) y
+  go (GoLeft:xs) f (Imp x y) boundVars nested         = Imp (go xs f x boundVars nested) y
+  go (GoLeft:xs) f (Or x y) boundVars nested          = Or (go xs f x boundVars nested) y
+  go (GoRight:xs) f (And x y) boundVars nested        = And x (go xs f y boundVars nested)
+  go (GoRight:xs) f (Imp x y) boundVars nested        = Imp x (go xs f y boundVars nested)
+  go (GoRight:xs) f (Or x y) boundVars nested         = Or x (go xs f y boundVars nested)
   -- applyFOLRule does not work at the equational level
-  go _ _ (PropVar (Eq x y))          = PropVar (Eq x y)
+  go _ _ (PropVar (Eq x y)) _ _                       = PropVar (Eq x y)
 
 -- Similar to applyFOLRule, but useful for terms within formulas (used by existence rule)
 applyArithRule :: Path -> (Arith a -> Arith a) -> Arith a -> Arith a
@@ -88,8 +89,8 @@ applyArithRule _ _ Z = Z -- nothing to apply for 0
 applyArithRule _ _ (Var x) = Var x -- nothing to apply for a variable
 
 -- Combines applyFOLRule and applyArithRule
-applyFOLArithRule :: Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
-applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Proof $ go pos (fromProof x)) x
+applyFOLArithRule :: Eq a => Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a))
+applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Proof $ go pos (fromProof x)) x Nothing
   where
   go GoLeft (PropVar (Eq x y)) = PropVar (Eq (applyArithRule path2 f x) y)
   go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))

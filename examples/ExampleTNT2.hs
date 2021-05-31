@@ -11,6 +11,8 @@ main = do
   mapM_ (\(n,p) -> putStrLn $ show n ++ ": " ++ pr p) $ zip [1..] [prop1,prop2,prop3,prop4,prop5]
   putStrLn "Multiplication"
   mapM_ (\(n,p) -> putStrLn $ show n ++ ": " ++ pr p) $ zip [6..] [prop6,prop7,prop8]
+  putStrLn "Example strictness of `applyFOLRule`"
+  putStrLn $ pr $ let formula = Proof $ And (PropVar $ Eq (Var A) (Var B)) (PropVar $ Exists B (PropVar (Eq (Var B) (Var C)))) in applyFOLRule [GoLeft] (\prfAeqB -> applyFOLRule [GoRight,GoLeft] (\prfBeqC -> fromRight $ ruleTransitivity prfAeqB prfBeqC) formula (Just prfAeqB)) formula Nothing
 
 {- Prop1 -}
 -- |- 0=0+0
@@ -159,7 +161,7 @@ prop5hyp = fromRight $ ruleGeneralize specific C Nothing
   specific = ruleFantasy f (PropVar (Eq (Plus (Var A) (Plus (Var B) (Var C))) (Plus (Plus (Var A) (Var B)) (Var C))))
   f premise =
    -- |- B+SC=S(B+C)
-   let eq1 = fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (fromRight $ axiom3 (Var A) (Var B))) (Var B)
+   let eq1 = fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (fromRight $ axiom3 (Var A) (Var B)) Nothing) (Var B)
        -- |- B=S(D+C) -> A+B=A+S(D+C)
        eq2 = fromRight $ ruleSpec (fromRight $ ruleSpec (fromRight $ ruleSpec prop3 (Var A)) (Var E)) (S (Plus (Var D) (Var C)))
        -- |- B+SC=S(D+C) -> A+B+SC=A+S(D+C)
@@ -177,7 +179,7 @@ prop5hyp = fromRight $ ruleGeneralize specific C Nothing
        -- |- A+B+SC=S((A+B)+C)
        eq7 = fromRight $ ruleTransitivity eq5 eq6
        -- |- S((A+B)+C)=(A+B)+SC
-       eq8 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (fromRight $ axiom3 (Var A) (Var B))) (Plus (Var A) (Var B))
+       eq8 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var C)) (fromRight $ axiom3 (Var A) (Var B)) Nothing) (Plus (Var A) (Var B))
    in  fromRight $ ruleTransitivity eq7 eq8
 
 -- |- All A:All B:All C:(A+B+C=(A+B)+C)
@@ -251,7 +253,7 @@ prop7hyp = fromRight $ ruleGeneralize specific B Nothing
        -- |- SA*SB=(A*B+B)+SA
        eq6 = fromRight $ ruleTransitivity eq4 eq5
        -- |- A*B+B+SA=(A*B+B)+SA
-       eq7 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var B)) prop5) (Mult (Var A) (Var B))) (S (Var A))
+       eq7 = fromRight $ ruleSymmetry $ fromRight $ ruleSpec (fromRight $ ruleSpec (applyFOLRule [GoRight] (\f -> fromRight $ ruleSpec f (Var B)) prop5 Nothing) (Mult (Var A) (Var B))) (S (Var A))
        -- |- SA*SB=A*B+B+SA
        eq8 = fromRight $ ruleTransitivity eq6 eq7
        -- |- B+SA=S(B+A)
