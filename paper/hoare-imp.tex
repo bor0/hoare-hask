@@ -349,7 +349,7 @@ Another interesting rule is \textbf{Rule of Existence}; we can't simply substitu
 We're given the following:
 
 \begin{itemize}
-\item \texttt{applyFOLRule} and \texttt{applyArithRule}, both of which are similar to \texttt{applyPropRule}. (Restriction: \texttt{applyFOLRule} cannot be applied to any quantified (bound) variables, similarly to \textbf{Rule of Generalization})
+\item \texttt{applyFOLRule} and \texttt{applyArithRule}, both of which are similar to \texttt{applyPropRule}. (Restriction: \texttt{applyFOLRule} cannot be applied to any quantified (bound) variables, similarly to \textbf{Rule of Generalization}.)
 \item \texttt{applyFOLArithRule} which is a combination of \texttt{applyFOLRule} and \texttt{applyArithRule}, which takes a list of paths and then applies the rule to all of them.
 \item \texttt{getTerm} - similar to \texttt{applyArithRule}, except that it returns a term instead of applying any function to it. This function is used to check that we're replacing the one and the same term in the formula.
 \end{itemize}
