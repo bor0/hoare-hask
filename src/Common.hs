@@ -2,14 +2,10 @@ module Common where
 
 import PrettyPrinter
 
--- Helps when we want to avoid too many nested `whenRight`s
+-- Helps when we want to avoid too many nested `Right`s
 fromRight :: Either String p -> p
 fromRight (Right x) = x
 fromRight (Left x) = error x
-
-whenRight :: Either a t -> (t -> Either a b) -> Either a b
-whenRight (Right x) f = f x
-whenRight (Left x)  _ = Left x
 
 allSame :: Eq a => [a] -> Bool
 allSame []  = False
