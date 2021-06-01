@@ -58,12 +58,11 @@ instance Pretty a => Pretty (FOL a) where
 -- | Apply FOL rule to a specific portion of a formula
 -- Might be useful for some rules that may require drilling, like `ruleInterchangeL`
 -- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed on any variable which appeared bound in the context.
-applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))) -> Proof (PropCalc (FOL a)) -> Maybe (Proof (PropCalc (FOL a))) -> Either String (Proof (PropCalc (FOL a)))
+applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))) -> Proof (PropCalc (FOL a)) -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
 applyFOLRule xs f (Proof x) ctx = go xs f x [] ctx
   where
-  go :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))) -> PropCalc (FOL a) -> [a] -> Maybe (Proof (PropCalc (FOL a))) -> Either String (Proof (PropCalc (FOL a)))
-  go [] f x boundVars (Just (Proof ctx)) | not (any (`elem` boundVars) (getVars ctx)) = f (Proof x)
-  go [] f x boundVars Nothing = f (Proof x)
+  go :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))) -> PropCalc (FOL a) -> [a] -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+  go [] f x boundVars premises | not (any (`elem` boundVars) (concatMap (getFreeVars . fromProof) premises)) = f (Proof x)
   go (_:xs) f (PropVar (ForAll x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \prfx -> Right $ Proof $ PropVar (ForAll x (fromProof prfx))
   go (_:xs) f (PropVar (Exists x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \prfx -> Right $ Proof $ PropVar (Exists x (fromProof prfx))
   go (_:xs) f (Not x) boundVars ctx                = go xs f x boundVars ctx >>= \prfx -> Right $ Proof $ Not (fromProof prfx)
@@ -89,7 +88,7 @@ applyArithRule _ _ (Var x) = Var x -- nothing to apply for a variable
 
 -- Combines applyFOLRule and applyArithRule
 applyFOLArithRule :: Eq a => Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
-applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Right $ Proof $ go pos (fromProof x)) x Nothing
+applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Right $ Proof $ go pos (fromProof x)) x []
   where
   go GoLeft (PropVar (Eq x y)) = PropVar (Eq (applyArithRule path2 f x) y)
   go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))
@@ -218,7 +217,7 @@ ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
 ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
-ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` (concatMap (getFreeVars . fromProof) premises) -- fantasy vars
+ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 

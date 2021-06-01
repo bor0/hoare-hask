@@ -26,7 +26,7 @@ pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (
     -- |- ~~Exists C:(A+C=B)
     step1 <- ruleDoubleTildeIntro step1
     -- |- ~~A+SC=B
-    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \prf -> ruleSpec prf (S (Var C))) step1 Nothing
+    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \prf -> ruleSpec prf (S (Var C))) step1 []
     -- |- A+SC=B
     step3 <- ruleDoubleTildeElim step2
     step4 <- theorem >>= \theorem -> ruleSpec theorem (Var C)
