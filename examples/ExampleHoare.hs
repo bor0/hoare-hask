@@ -2,7 +2,6 @@ module ExampleHoare where
 
 import Common
 import ExampleCommon
-import ExampleGentzen
 import ExampleTNT
 import Gentzen
 import Hoare
@@ -24,34 +23,34 @@ egEval = eval (M.fromList [(B, 3)]) countToB
 pre = ruleFantasy f premise where
   premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
   -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-  f premise = fromRight $ ruleExistence step6 C [] where
+  f premise = go >>= \go -> ruleExistence go C [] where
     -- |- ~~Exists C:(A+C=B)
-    step1 = ruleDoubleTildeIntro (fromRight $ ruleSepR premise)
-    -- |- ~~A+SC=B
-    step2 = applyFOLRule [GoLeft] (\x -> fromRight $ ruleSpec (fromRight $ ruleInterchangeR x) (S (Var C))) step1 Nothing
-    -- |- A+SC=B
-    step3 = fromRight $ ruleDoubleTildeElim step2
-    -- |- A+SC=SA+C
-    step4 = fromRight $ ruleSpec (fromRight $ ruleSpec theorem (Var C)) (Var A)
-    -- |- SA+C=A+SC
-    step5 = fromRight $ ruleSymmetry step4
-    -- |- SA+C=B
-    step6 = fromRight $ ruleTransitivity step5 step3
+    go = ruleSepR premise >>= \foo -> ruleDoubleTildeIntro foo >>= \step1 ->
+         -- |- ~~A+SC=B
+         applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \rir -> ruleSpec rir (S (Var C))) step1 Nothing >>= \step2 ->
+         -- |- A+SC=B
+         ruleDoubleTildeElim step2 >>= \step3 ->
+         -- |- A+SC=SA+C
+         (theorem >>= \theorem -> ruleSpec theorem (Var C)) >>= \thm -> ruleSpec thm (Var A) >>= \step4 ->
+         -- |- SA+C=A+SC
+         ruleSymmetry step4 >>= \step5 ->
+         -- |- SA+C=B
+         ruleTransitivity step5 step3
 
 -- |- Exists C:(A+C=B) -> Exists C:(A+C=B)
-post = ruleFantasy id (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+post = ruleFantasy Right (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
 
 -- {Exists C:(SA+C=B)} A := SA; {Exists C:(A+C=B)}
 step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
 
 -- {~A=B /\ Exists C:(A+C=B)} A := SA; {Exists C:(A+C=B)}
-step4 = fromRight $ hoareConsequence pre step5 post
+step4 = pre >>= \pre -> post >>= \post -> step5 >>= \step5 -> hoareConsequence pre step5 post
 
 -- {Exists C:(0+C=B)} A := 0; {Exists C:(A+C=B)}
 step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
 
 -- {Exists C:(A+C=B)} (While (~A=B) Do {A := SA;}); {~~A=B /\ Exists C:(A+C=B)}
-step3 = fromRight $ hoareWhile step4
+step3 = step4 >>= \step4 -> hoareWhile step4
 
 -- {Exists C:(0+C=B)} A := 0; (While (~A=B) Do {A := SA;}); {~~A=B /\ Exists C:(A+C=B)}
-proof = fromRight $ hoareSequence step2 step3
+proof = step2 >>= \step2 -> step3 >>= \step3 -> hoareSequence step2 step3

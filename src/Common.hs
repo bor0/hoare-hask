@@ -2,11 +2,6 @@ module Common where
 
 import PrettyPrinter
 
--- Helps when we want to avoid too many nested `Right`s
-fromRight :: Either String p -> p
-fromRight (Right x) = x
-fromRight (Left x) = error x
-
 allSame :: Eq a => [a] -> Bool
 allSame []  = False
 allSame [x] = True
@@ -22,6 +17,10 @@ newtype Proof a = Proof a deriving (Eq, Show)
 
 fromProof :: Proof a -> a
 fromProof (Proof a) = a
+
+instance (Show a, Pretty b) => Pretty (Either a b) where
+  prPrec x (Right a) = prPrec x a
+  prPrec x (Left a)  = show a
 
 instance Pretty a => Pretty (Proof a) where
   prPrec x (Proof a) = "|- " ++ prPrec x a

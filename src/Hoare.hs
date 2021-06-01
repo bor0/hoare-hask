@@ -14,13 +14,13 @@ instance Pretty a => Pretty (HoareTriple a) where
   prPrec q (HoareTriple pre c post) = "{" ++ prPrec q pre ++ "} " ++ prPrec q c ++ " {" ++ prPrec q post ++ "}"
 
 -- | Hoare skip rule
-hoareSkip :: PropCalc (FOL a) -> HoareTriple a
-hoareSkip q = HoareTriple q CSkip q
+hoareSkip :: PropCalc (FOL a) -> Either String (HoareTriple a)
+hoareSkip q = Right $ HoareTriple q CSkip q
 
 -- | Hoare assignment rule
-hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> HoareTriple a
+hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> Either String (HoareTriple a)
 hoareAssignment v e q =
-  HoareTriple
+  Right $ HoareTriple
   (fromProof (substPropCalc (Proof q) (Var v) e))
   (CAssign v e)
   q

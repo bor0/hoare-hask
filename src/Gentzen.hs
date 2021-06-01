@@ -28,26 +28,25 @@ instance Pretty a => Pretty (PropCalc a) where
 
 -- | Apply prop rule to a specific portion of a formula
 -- Might be useful for some rules that may require drilling
-applyPropRule :: Path -> (Proof (PropCalc a) -> Proof (PropCalc a)) -> Proof (PropCalc a) -> Proof (PropCalc a)
-applyPropRule xs f (Proof x) = Proof $ go xs (\x -> fromProof $ f (Proof x)) x
+applyPropRule :: Path -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+applyPropRule xs f (Proof x) = go xs f x
   where
-  go :: Path -> (PropCalc a -> PropCalc a) -> PropCalc a -> PropCalc a
-  go (GoLeft:xs) f (Not x) = Not (go xs f x)
-  go (GoLeft:xs) f (And x y) = And (go xs f x) y
-  go (GoLeft:xs) f (Or x y) = Or (go xs f x) y
-  go (GoLeft:xs) f (Imp x y) = Imp (go xs f x) y
-  go (GoRight:xs) f (Not x) = Not (go xs f x)
-  go (GoRight:xs) f (And x y) = And x (go xs f y)
-  go (GoRight:xs) f (Or x y) = Or x (go xs f y)
-  go (GoRight:xs) f (Imp x y) = Imp x (go xs f y)
-  go _ f x = f x
+  go :: Path -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> PropCalc a -> Either String (Proof (PropCalc a))
+  go (_:xs) f (Not x)         = go xs f x >>= \prfx -> Right $ Proof $ Not (fromProof prfx)
+  go (GoLeft:xs) f (And x y)  = go xs f x >>= \prfx -> Right $ Proof $ And (fromProof prfx) y
+  go (GoLeft:xs) f (Or x y)   = go xs f x >>= \prfx -> Right $ Proof $ Or (fromProof prfx) y
+  go (GoLeft:xs) f (Imp x y)  = go xs f x >>= \prfx -> Right $ Proof $ Imp (fromProof prfx) y
+  go (GoRight:xs) f (And x y) = go xs f y >>= \prfy -> Right $ Proof $ And x (fromProof prfy)
+  go (GoRight:xs) f (Or x y)  = go xs f y >>= \prfy -> Right $ Proof $ Or x (fromProof prfy)
+  go (GoRight:xs) f (Imp x y) = go xs f y >>= \prfy -> Right $ Proof $ Imp x (fromProof prfy)
+  go _ f x = f (Proof x)
 
 {- Rules -}
 
 -- | Joining Rule
 -- If x and y are theorems, then <x∧y> is a theorem.
-ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> Proof (PropCalc a)
-ruleJoin (Proof x) (Proof y) = Proof $ And x y
+ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleJoin (Proof x) (Proof y) = Right $ Proof $ And x y
 
 -- | Sep Rule
 -- If <x∧y> is a theorem, then both x and y are theorems.
@@ -63,8 +62,8 @@ ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 
 -- | Double-Tilde Rule
 -- The string ~~ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
-ruleDoubleTildeIntro :: Proof (PropCalc a) -> Proof (PropCalc a)
-ruleDoubleTildeIntro (Proof x) = Proof $ Not (Not x)
+ruleDoubleTildeIntro :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDoubleTildeIntro (Proof x) = Right $ Proof $ Not (Not x)
 
 -- | Double-Tilde Rule
 -- The string ~~ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
@@ -77,8 +76,8 @@ ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 -- Additionally, inside a fantasy, any theorem from the "reality" one level higher can be brought in and used.
 -- Imp intro accepts a rule and an assumption (simply a well-formed formula, not necessarily proven)
 -- Our data types are constructed such that all formulas are well-formed
-ruleFantasy :: (Proof (PropCalc a) -> Proof (PropCalc a)) -> PropCalc a -> Proof (PropCalc a)
-ruleFantasy f x = Proof $ Imp x $ fromProof (f (Proof x))
+ruleFantasy :: (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> PropCalc a -> Either String (Proof (PropCalc a))
+ruleFantasy f x = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
 
 -- | Rule of Detachment
 -- If x and <x⊃y> are both theorems, then y is a theorem.
