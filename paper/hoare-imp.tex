@@ -914,8 +914,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
-TODO
-> let prf1 = ruleFantasy (\pq -> ruleSepR pq >>= \q -> axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A) >>= \ax1A -> ruleJoin ax1A q) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let prf1 = ruleFantasy (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A)) <*> ruleSepR pq) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
 > let prf2 = ruleFantasy Right $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0
