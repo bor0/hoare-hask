@@ -154,7 +154,7 @@ ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
 ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 \end{lstlisting}
 
-Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box as well.
+Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". Further, we use the \texttt{Either} monad to cascade success or halt on failure. We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box as well.
 
 \begin{lstlisting}
 > putStrLn $ pr $ ruleFantasy (\pq -> join $ ruleJoin <$> ruleSepR pq <*> ruleSepL pq) (And (PropVar A) (PropVar B))
