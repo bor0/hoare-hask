@@ -18,9 +18,9 @@ newtype Proof a = Proof a deriving (Eq, Show)
 fromProof :: Proof a -> a
 fromProof (Proof a) = a
 
-instance (Show a, Pretty b) => Pretty (Either a b) where
+instance (Pretty a, Pretty b) => Pretty (Either a b) where
   prPrec x (Right a) = prPrec x a
-  prPrec x (Left a)  = show a
+  prPrec x (Left a)  = "Error: " ++ pr a
 
 instance Pretty a => Pretty (Proof a) where
   prPrec x (Proof a) = "|- " ++ prPrec x a
