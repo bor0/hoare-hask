@@ -14,7 +14,7 @@ See it in action on my mobile phone on [this Tweet](https://twitter.com/BSitniko
 
 ## Prerequisites
 
-Make sure you have the [Haskell Tool Stack](https://haskellstack.org/) installed.
+Make sure you have the [Haskell Tool Stack](https://haskellstack.org/) installed, or Hugs.
 
 ## Running the examples
 
@@ -24,5 +24,7 @@ For instance, to run the proof for the `countToB` program defined in the paper, 
 
 - `stack repl examples/ExampleHoare.hs --ghci-options -iexamples --ghci-options -isrc`
 - Once in the REPL mode, evaluate `putStrLn $ pr proof`
+
+For hugs, while in the `src` folder, run `hugs -F"cpphs-hugs --noline -D__HUGS__" ../examples/ExampleHoare.hs`
 
 Copyright 2021, Boro Sitnikovski. All rights reserved.

@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleInstances #-}
 module PrettyPrinter where
 
 {- Pretty printer -}
@@ -16,6 +15,3 @@ instance Pretty Integer where
 
 instance Pretty Bool where
   prPrec _ = show
-
-instance Pretty String where
-  prPrec x = id
