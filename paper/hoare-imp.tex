@@ -334,15 +334,13 @@ ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 We can also implement \textbf{Rule of Generalization} as follows:
 
 \begin{lstlisting}
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Either String (Proof (PropCalc (FOL a)))
-ruleGeneralize (Proof f) v Nothing | v `notElem` getBoundVars f
-  = Right $ Proof $ PropVar (ForAll v f)
-ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `notElem` getFreeVars (fromProof premise) -- fantasy vars
+ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` (concatMap (getFreeVars . fromProof) premises) -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 \end{lstlisting}
 
-The third argument represents the premise (if any) within a fantasy - this is the Restriction part of the rule.
+The third argument represents the premises (if any) within fantasies - this is the Restriction part of the rule.
 
 Another interesting rule is \textbf{Rule of Existence}; we can't simply substitute everything as we did with \texttt{ruleSpec}; we need to allow replacement of zero, one, or multiple terms, provided these terms are equivalent.
 
@@ -436,9 +434,9 @@ lemma1 = do
     -- |- D+SSC=SD+SC
     step11 <- ruleTransitivity step10 step6
     -- |- All D:(D+SSC=SD+SC)
-    ruleGeneralize step11 D (Just premise)
+    ruleGeneralize step11 D [premise]
   -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
-  ruleGeneralize step7 C Nothing
+  ruleGeneralize step7 C []
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}[t]{0.45\textwidth}
@@ -469,7 +467,7 @@ lemma2 = do
   -- |- D+S0=SD+0
   step11 <- ruleTransitivity step8 step10
   -- lemma2 |- All D:(D+S0=SD+0)
-  ruleGeneralize step11 D Nothing
+  ruleGeneralize step11 D []
 \end{lstlisting}
 
 $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:

@@ -217,10 +217,8 @@ ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> Maybe (Proof (PropCalc (FOL a))) -> Either String (Proof (PropCalc (FOL a)))
-ruleGeneralize (Proof f) v Nothing | v `notElem` getBoundVars f
-  = Right $ Proof $ PropVar (ForAll v f)
-ruleGeneralize (Proof f) v (Just premise) | v `notElem` getBoundVars f && v `notElem` getFreeVars (fromProof premise) -- fantasy vars
+ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` (concatMap (getFreeVars . fromProof) premises) -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 

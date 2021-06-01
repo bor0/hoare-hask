@@ -31,9 +31,9 @@ lemma1 = do
     -- |- D+SSC=SD+SC
     step11 <- ruleTransitivity step10 step6
     -- |- All D:(D+SSC=SD+SC)
-    ruleGeneralize step11 D (Just premise)
+    ruleGeneralize step11 D [premise]
   -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
-  ruleGeneralize step7 C Nothing
+  ruleGeneralize step7 C []
 
 lemma2 = do
   -- |- All A:All B:(A+SB=S(A+B))
@@ -59,7 +59,7 @@ lemma2 = do
   -- |- D+S0=SD+0
   step11 <- ruleTransitivity step8 step10
   -- lemma2 |- All D:(D+S0=SD+0)
-  ruleGeneralize step11 D Nothing
+  ruleGeneralize step11 D []
 
 -- |- All C:All D:(D+SC=SD+C)
 theorem = join $ ruleInduction <$> lemma2 <*> lemma1
