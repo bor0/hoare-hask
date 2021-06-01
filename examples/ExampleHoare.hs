@@ -21,25 +21,26 @@ countToB =
 -- Example evaluation
 egEval = eval (M.fromList [(B, 3)]) countToB
 
-pre = ruleFantasy f premise where
-  premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-  -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-  f premise = go >>= \go -> ruleExistence go C [] where
+pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))) $ \premise -> do
+    step1 <- ruleSepR premise
     -- |- ~~Exists C:(A+C=B)
-    go = ruleSepR premise >>= \foo -> ruleDoubleTildeIntro foo >>= \step1 ->
-         -- |- ~~A+SC=B
-         applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \rir -> ruleSpec rir (S (Var C))) step1 Nothing >>= \step2 ->
-         -- |- A+SC=B
-         ruleDoubleTildeElim step2 >>= \step3 ->
-         -- |- A+SC=SA+C
-         (theorem >>= \theorem -> ruleSpec theorem (Var C)) >>= \thm -> ruleSpec thm (Var A) >>= \step4 ->
-         -- |- SA+C=A+SC
-         ruleSymmetry step4 >>= \step5 ->
-         -- |- SA+C=B
-         ruleTransitivity step5 step3
+    step1 <- ruleDoubleTildeIntro step1
+    -- |- ~~A+SC=B
+    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \rir -> ruleSpec rir (S (Var C))) step1 Nothing
+    -- |- A+SC=B
+    step3 <- ruleDoubleTildeElim step2
+    step4 <- theorem >>= \theorem -> ruleSpec theorem (Var C)
+    -- |- A+SC=SA+C
+    step4 <- ruleSpec step4 (Var A)
+    -- |- SA+C=A+SC
+    step5 <- ruleSymmetry step4
+    -- |- SA+C=B
+    step6 <- ruleTransitivity step5 step3
+    -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
+    ruleExistence step6 C []
 
 -- |- Exists C:(A+C=B) -> Exists C:(A+C=B)
-post = ruleFantasy Right (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+post = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) Right
 
 -- {Exists C:(SA+C=B)} A := SA; {Exists C:(A+C=B)}
 step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))

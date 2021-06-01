@@ -146,8 +146,8 @@ That is, we just lift the values from the object level to Haskell's level, and H
 Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
 
 \begin{lstlisting}
-ruleFantasy :: (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> PropCalc a -> Either String (Proof (PropCalc a))
-ruleFantasy f x = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
+ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> Either String (Proof (PropCalc a))
+ruleFantasy x f = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
 
 ruleDetachment :: Eq a => Proof (PropCalc a) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
 ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
@@ -157,7 +157,7 @@ ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". Further, we use the \texttt{Either} monad to cascade success or halt on failure. We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box as well.
 
 \begin{lstlisting}
-> putStrLn $ pr $ ruleFantasy (\pq -> join $ ruleJoin <$> ruleSepR pq <*> ruleSepL pq) (And (PropVar A) (PropVar B))
+> putStrLn $ pr $ ruleFantasy (And (PropVar A) (PropVar B)) (\pq -> join $ ruleJoin <$> ruleSepR pq <*> ruleSepL pq)
 |- A /\ B -> B /\ A
 \end{lstlisting}
 
@@ -202,7 +202,7 @@ Of course, going left or right doesn't make much sense for unary operators, so t
 Now we can use this to apply \textbf{Double-Tilde Rule} to $B$ within $A \land (A \lor B)$ as follows:
 
 \begin{lstlisting}
-> putStrLn $ pr $ ruleFantasy (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro) (And (PropVar A) (Or (PropVar A) (PropVar B)))
+> putStrLn $ pr $ ruleFantasy (And (PropVar A) (Or (PropVar A) (PropVar B))) (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro)
 |- A /\ <A \/ B> -> A /\ <A \/ ~~B>
 \end{lstlisting}
 
@@ -406,71 +406,70 @@ axiom5 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (P
 axiom5 _ _ = Left "axiom5: Cannot construct proof"
 \end{lstlisting}
 
-With a few example proofs:
+With a few example proofs, where we use the \texttt{do} notation to increase readability by avoiding many nested monadic binds.
 
 \begin{minipage}[t]{0.53\textwidth}
 $\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
 
 \begin{lstlisting}
--- |- All A:All B:(A+SB=S(A+B))
-axiom3 (Var A) (Var B) >>= \step1 ->
--- |- All B:(D+SB=S(D+B))
-ruleSpec step1 (Var D) >>= \step2 ->
--- |- D+SSC=S(D+SC)
-ruleSpec step2 (S (Var C)) >>= \step3 ->
--- |- All B:(SD+SB=S(SD+B))
-ruleSpec step1 (S (Var D)) >>= \step4 ->
--- |- SD+SC=S(SD+C)
-ruleSpec step4 (Var C) >>= \step5 ->
--- |- S(SD+C)=SD+SC
-ruleSymmetry step5 >>= \step6 ->
-let f premise =
-     -- |- D+SC=SD+C
-     ruleSpec premise (Var D) >>= \step8 ->
-     -- |- S(D+SC)=S(SD+C)
-     ruleAddS step8 >>= \step9 ->
-     -- |- D+SSC=S(SD+C)
-     ruleTransitivity step3 step9 >>= \step10 ->
-     -- |- D+SSC=SD+SC
-     ruleTransitivity step10 step6 >>= \step11 ->
-     -- |- All D:(D+SSC=SD+SC)
-     ruleGeneralize step11 D (Just premise)
-    -- All D:(D+SC=SD+C)
-    premise = PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))
-    -- |- All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)
-    in ruleFantasy f premise >>= \step7 ->
-    -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
-    ruleGeneralize step7 C Nothing
+lemma1 = do
+  -- |- All A:All B:(A+SB=S(A+B))
+  step1 <- axiom3 (Var A) (Var B)
+  -- |- All B:(D+SB=S(D+B))
+  step2 <- ruleSpec step1 (Var D)
+  -- |- D+SSC=S(D+SC)
+  step3 <- ruleSpec step2 (S (Var C))
+  -- |- All B:(SD+SB=S(SD+B))
+  step4 <- ruleSpec step1 (S (Var D))
+  -- |- SD+SC=S(SD+C)
+  step5 <- ruleSpec step4 (Var C)
+  -- |- S(SD+C)=SD+SC
+  step6 <- ruleSymmetry step5
+  -- |- All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)
+  step7 <- ruleFantasy (PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))) $ \premise -> do
+    -- |- D+SC=SD+C
+    step8 <- ruleSpec premise (Var D)
+    -- |- S(D+SC)=S(SD+C)
+    step9 <- ruleAddS step8
+    -- |- D+SSC=S(SD+C)
+    step10 <- ruleTransitivity step3 step9
+    -- |- D+SSC=SD+SC
+    step11 <- ruleTransitivity step10 step6
+    -- |- All D:(D+SSC=SD+SC)
+    ruleGeneralize step11 D (Just premise)
+  -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
+  ruleGeneralize step7 C Nothing
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}[t]{0.45\textwidth}
 $\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
 
 \begin{lstlisting}
--- |- All A:All B:(A+SB=S(A+B))
-axiom3 (Var A) (Var B) >>= \step1 ->
--- |- All B:(D+SB=S(D+B))
-ruleSpec step1 (Var D) >>= \step2 ->
--- |- D+SSC=S(D+SC)
-ruleSpec step2 (S (Var C)) >>= \step3 ->
--- |- D+S0=S(D+0)
-ruleSpec step2 Z >>= \step4 ->
--- |- All A:(A+0=A)
-axiom2 (Var A) >>= \step5 ->
--- |- D+0=D
-ruleSpec step5 (Var D) >>= \step6 ->
--- |- S(D+0)=SD
-ruleAddS step6 >>= \step7 ->
--- |- D+S0=SD
-ruleTransitivity step4 step7 >>= \step8 ->
--- |- SD+0=SD
-ruleSpec step5 (S (Var D)) >>= \step9 ->
--- |- SD=SD+0
-ruleSymmetry step9 >>= \step10 ->
--- |- D+S0=SD+0
-ruleTransitivity step8 step10 >>= \step11 ->
--- lemma2 |- All D:(D+S0=SD+0)
-ruleGeneralize step11 D Nothing
+lemma2 = do
+  -- |- All A:All B:(A+SB=S(A+B))
+  step1 <- axiom3 (Var A) (Var B)
+  -- |- All B:(D+SB=S(D+B))
+  step2 <- ruleSpec step1 (Var D)
+  -- |- D+SSC=S(D+SC)
+  step3 <- ruleSpec step2 (S (Var C))
+  -- |- D+S0=S(D+0)
+  step4 <- ruleSpec step2 Z
+  -- |- All A:(A+0=A)
+  step5 <- axiom2 (Var A)
+  -- |- D+0=D
+  step6 <- ruleSpec step5 (Var D)
+  -- |- S(D+0)=SD
+  step7 <- ruleAddS step6
+  -- |- D+S0=SD
+  step8 <- ruleTransitivity step4 step7
+  -- |- SD+0=SD
+  step9 <- ruleSpec step5 (S (Var D))
+  -- |- SD=SD+0
+  step10 <- ruleSymmetry step9
+  -- |- D+S0=SD+0
+  step11 <- ruleTransitivity step8 step10
+  -- lemma2 |- All D:(D+S0=SD+0)
+  ruleGeneralize step11 D Nothing
 \end{lstlisting}
 
 $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:
@@ -841,9 +840,9 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 \begin{lstlisting}
 > let eg = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0 /\ 0=0}
-> let pre = ruleFantasy Right $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
+> let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) Right
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0 /\ 0=0
-> let post = ruleFantasy ruleSepL $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
+> let post = ruleFantasy (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
 |- A=SS0 /\ 0=0 -> A=SS0
 > putStrLn $ pr $ join $ hoareConsequence <$> pre <*> eg <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
@@ -854,9 +853,9 @@ For another example, we can strengthen the precondition:
 \begin{lstlisting}
 > let eg = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
 {B+S0=SS0} A := B+S0; {A=SS0}
-> let pre = ruleFantasy ruleSepL $ And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))
+> let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0
-> let post = ruleFantasy Right $ PropVar (Eq (Var A) (S (S Z)))
+> let post = ruleFantasy (PropVar (Eq (Var A) (S (S Z)))) Right
 |- A=SS0 -> A=SS0
 > putStrLn $ pr $ join $ hoareConsequence <$> pre <*> eg <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
@@ -914,9 +913,9 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
-> let prf1 = ruleFantasy (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A)) <*> ruleSepR pq) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let prf1 = ruleFantasy (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A)) <*> ruleSepR pq)
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
-> let prf2 = ruleFantasy Right $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let prf2 = ruleFantasy (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) Right
 |- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0
 \end{lstlisting}
 
@@ -954,9 +953,9 @@ Similarly, as we did in the example for the H-Conditional rule, following the ru
 \begin{lstlisting}
 > let c = hoareSkip (PropVar $ Eq Z Z) :: Either String (HoareTriple Integer)
 {0=0} ; {0=0}
-> let pre = ruleFantasy ruleSepR (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) :: Either String (Proof (PropCalc (FOL Integer)))
+> let pre = ruleFantasy (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) ruleSepR :: Either String (Proof (PropCalc (FOL Integer)))
 |- 0=0 /\ 0=0 -> 0=0
-> let post = ruleFantasy Right (PropVar $ Eq Z Z) :: Either String (Proof (PropCalc (FOL Integer)))
+> let post = ruleFantasy (PropVar $ Eq Z Z) Right :: Either String (Proof (PropCalc (FOL Integer)))
 |- 0=0 -> 0=0
 > let egTriple = join $ hoareConsequence <$> pre <*> c <*> post
 {0=0 /\ 0=0} ; {0=0}
@@ -1009,29 +1008,30 @@ $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 
 \begin{lstlisting}
 pre   = ???
-post  = ruleFantasy Right (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
+post  = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) Right
 step4 = join $ hoareConsequence <$> pre <*> step5 <*> post
 \end{lstlisting}
 
 Here's the complete proof for the preconditional part:
 
 \begin{lstlisting}
-pre = ruleFantasy f premise where
-  premise = And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-  -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-  f premise = go >>= \go -> ruleExistence go C [] where
+pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))) $ \premise -> do
+    step1 <- ruleSepR premise
     -- |- ~~Exists C:(A+C=B)
-    go = ruleSepR premise >>= \premiseR -> ruleDoubleTildeIntro premiseR >>= \step1 ->
-         -- |- ~~A+SC=B
-         applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \rir -> ruleSpec rir (S (Var C))) step1 Nothing >>= \step2 ->
-         -- |- A+SC=B
-         ruleDoubleTildeElim step2 >>= \step3 ->
-         -- |- A+SC=SA+C
-         (theorem >>= \theorem -> ruleSpec theorem (Var C)) >>= \thm -> ruleSpec thm (Var A) >>= \step4 ->
-         -- |- SA+C=A+SC
-         ruleSymmetry step4 >>= \step5 ->
-         -- |- SA+C=B
-         ruleTransitivity step5 step3
+    step1 <- ruleDoubleTildeIntro step1
+    -- |- ~~A+SC=B
+    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \rir -> ruleSpec rir (S (Var C))) step1 Nothing
+    -- |- A+SC=B
+    step3 <- ruleDoubleTildeElim step2
+    step4 <- theorem >>= \theorem -> ruleSpec theorem (Var C)
+    -- |- A+SC=SA+C
+    step4 <- ruleSpec step4 (Var A)
+    -- |- SA+C=A+SC
+    step5 <- ruleSymmetry step4
+    -- |- SA+C=B
+    step6 <- ruleTransitivity step5 step3
+    -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
+    ruleExistence step6 C []
 \end{lstlisting}
 
 Finally, \texttt{step1} produces the triple:

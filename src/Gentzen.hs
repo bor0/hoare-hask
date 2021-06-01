@@ -76,8 +76,8 @@ ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 -- Additionally, inside a fantasy, any theorem from the "reality" one level higher can be brought in and used.
 -- Imp intro accepts a rule and an assumption (simply a well-formed formula, not necessarily proven)
 -- Our data types are constructed such that all formulas are well-formed
-ruleFantasy :: (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> PropCalc a -> Either String (Proof (PropCalc a))
-ruleFantasy f x = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
+ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> Either String (Proof (PropCalc a))
+ruleFantasy x f = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
 
 -- | Rule of Detachment
 -- If x and <x⊃y> are both theorems, then y is a theorem.
