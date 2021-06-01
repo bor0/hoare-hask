@@ -126,35 +126,39 @@ These rules come from GEB, and we list them here for posterity:
 \item \textbf{Switcheroo Rule}: $<x \lor y>$ and $<\neg x \to y>$ are interchangeable.
 \end{itemize}
 
+In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms. We create a wrapper for that:
+
+\begin{lstlisting}
+type ESP a = Either String (Proof (PropCalc a))
+\end{lstlisting}
+
 Here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule}:
 
 \begin{lstlisting}
-ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> ESP a
 ruleJoin (Proof x) (Proof y) = Right $ Proof $ And x y
 
-ruleSepL :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSepL :: Proof (PropCalc a) -> ESP a
 ruleSepL (Proof (And x y)) = Right $ Proof x
 ruleSepL _ = Left "ruleSepL: Cannot construct proof"
 
-ruleSepR :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleSepR :: Proof (PropCalc a) -> ESP a
 ruleSepR (Proof (And x y)) = Right $ Proof y
 ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 \end{lstlisting}
 
-That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms.
-
-Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
+That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
 
 \begin{lstlisting}
-ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> Either String (Proof (PropCalc a))
+ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> ESP a) -> ESP a
 ruleFantasy x f = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
 
-ruleDetachment :: Eq a => Proof (PropCalc a) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDetachment :: Eq a => Proof (PropCalc a) -> Proof (PropCalc a) -> ESP a
 ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
 ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 \end{lstlisting}
 
-Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". Further, we use the \texttt{Either} monad to cascade success or halt on failure. We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box as well.
+Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". Further, we use the \texttt{Either} monad to cascade success or halt on failure. We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work; we get support for \textbf{Carry Over Rule} out of the box.
 
 \begin{lstlisting}
 > putStrLn $ pr $ ruleFantasy (And (PropVar A) (PropVar B)) (\pq -> join $ ruleJoin <$> ruleSepR pq <*> ruleSepL pq)
@@ -163,15 +167,15 @@ Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in oth
 
 Here's another example implementation for \textbf{Double-Tilde Rule}:
 
-\begin{minipage}{0.49\textwidth}
+\begin{minipage}{0.45\textwidth}
 \begin{lstlisting}
-ruleDoubleTildeIntro :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDoubleTildeIntro :: Proof (PropCalc a) -> ESP a
 ruleDoubleTildeIntro (Proof x) = Right $ Proof $ Not (Not x)
 \end{lstlisting}
 \end{minipage}
-\begin{minipage}{0.49\textwidth}
+\begin{minipage}{0.53\textwidth}
 \begin{lstlisting}
-ruleDoubleTildeElim :: Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+ruleDoubleTildeElim :: Proof (PropCalc a) -> ESP a
 ruleDoubleTildeElim (Proof (Not (Not x))) = Right $ Proof x
 ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 \end{lstlisting}
@@ -183,10 +187,10 @@ However, in the current implementation, we can't apply a rule to e.g. $B$ within
 data Pos = GoLeft | GoRight
 type Path = [Pos]
 
-applyPropRule :: Path -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> Proof (PropCalc a) -> Either String (Proof (PropCalc a))
+applyPropRule :: Path -> (Proof (PropCalc a) -> ESP a) -> Proof (PropCalc a) -> ESP a
 applyPropRule xs f (Proof x) = go xs f x
   where
-  go :: Path -> (Proof (PropCalc a) -> Either String (Proof (PropCalc a))) -> PropCalc a -> Either String (Proof (PropCalc a))
+  go :: Path -> (Proof (PropCalc a) -> ESP a) -> PropCalc a -> ESP a
   go (_:xs) f (Not x)         = go xs f x >>= \prfx -> Right $ Proof $ Not (fromProof prfx)
   go (GoLeft:xs) f (And x y)  = go xs f x >>= \prfx -> Right $ Proof $ And (fromProof prfx) y
   go (GoLeft:xs) f (Or x y)   = go xs f x >>= \prfx -> Right $ Proof $ Or (fromProof prfx) y
@@ -280,7 +284,7 @@ Again, these formation rules come from GEB, and we list them here for posterity:
 \item \textbf{Rule of Transitivity}: If $r=s$ and $s=t$ are theorems, then so is $r=t$.
 \item \textbf{Rule Add S}: If $r=t$ is a theorem, then $Sr=St$ is a theorem.
 \item \textbf{Rule Drop S}: If $Sr=St$ is theorem, then $r=t$ is a theorem.
-\item \textbf{Rule of Induction}: Let $X[u]$ represent a well-formed formula in which the variable $u$ is free, and $X[x/u]$ represent the same string, with each appearance of $u$ replaced by $x$. If both $\forall u:X[u] \to X[Su/u]$ and $X[0/u]$ are theorems, then $\forall u:X[u]$ is also a theorem.
+\item \textbf{Rule of Induction}: Let $X[u]$ represent a well-formed formula in which the variable $u$ is free, and $X[x/u]$ represents the same string, with each appearance of $u$ replaced by $x$. If both $\forall u:X[u] \to X[Su/u]$ and $X[0/u]$ are theorems, then $\forall u:X[u]$ is also a theorem.
 \end{itemize}
 
 To start, we provide an implementation of \texttt{substPropCalc}, which replaces all occurences of a term with another term in a formula:
@@ -326,7 +330,7 @@ getBoundVars x = nub $ go x where
 We are now able to implement \textbf{Rule of Specification}:
 
 \begin{lstlisting}
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> ESP (FOL a)
 ruleSpec (Proof (PropVar (ForAll x y))) e | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
 ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 \end{lstlisting}
@@ -334,7 +338,7 @@ ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 We can also implement \textbf{Rule of Generalization} as follows:
 
 \begin{lstlisting}
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
 ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` (concatMap (getFreeVars . fromProof) premises) -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
@@ -342,7 +346,7 @@ ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 
 The third argument represents the premises (if any) within fantasies - this is the Restriction part of the rule.
 
-Another interesting rule is \textbf{Rule of Existence}; we can't simply substitute everything as we did with \texttt{ruleSpec}; we need to allow replacement of zero, one, or multiple terms, provided these terms are equivalent.
+Another interesting rule is \textbf{Rule of Existence}. We can't simply substitute everything as we did with \texttt{ruleSpec}; we need to allow replacement of zero, one, or multiple terms, provided these terms are equivalent.
 
 We're given the following:
 
@@ -355,13 +359,11 @@ We're given the following:
 Now, \textbf{Rule of Existence} can be implemented as follows:
 
 \begin{lstlisting}
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Either String (Proof (PropCalc (FOL a)))
+ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> ESP (FOL a)
 ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
   go f paths >>= \prf -> Right $ Proof $ PropVar (Exists v (fromProof prf))
   where
-  go f ((pos, path1, path2):paths) =
-    let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
-    in newProof >>= \prf -> go prf paths
+  go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var v) f >>= \prf -> go prf paths
   go x _ = Right x
 ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
   Right $ Proof $ PropVar (Exists v (fromProof f))
@@ -371,7 +373,7 @@ ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 Here's another example implementation for \textbf{Rule of Induction}:
 
 \begin{lstlisting}
-ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   -- in base' and conc, y is Proof y because it's an assumption
   let base' = substPropCalc (Proof y) (Var x) Z
@@ -404,10 +406,13 @@ axiom5 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (P
 axiom5 _ _ = Left "axiom5: Cannot construct proof"
 \end{lstlisting}
 
-With a few example proofs, where we use the \texttt{do} notation to increase readability by avoiding many nested monadic binds.
+With a few example proofs, where we use the \texttt{do} notation to increase readability by avoiding nested monadic binds.
 
 \begin{minipage}[t]{0.53\textwidth}
-$\star \ \forall A: \forall B: A + S(B) = S(A + B)$:
+$\begin{aligned}
+\star \ \forall C: \forall D: D + S(C) = S(D) + C \to \\
+\forall D: D + S(S(C)) = S(D) + S(C):
+\end{aligned}$
 
 \begin{lstlisting}
 lemma1 = do
@@ -440,7 +445,7 @@ lemma1 = do
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}[t]{0.45\textwidth}
-$\star \ \forall D: \forall B: D + S(Z) = S(D) + Z$:
+$\star \ \forall D: D + S(Z) = S(D) + Z$:
 
 \begin{lstlisting}
 lemma2 = do
@@ -788,6 +793,7 @@ We represent the Hoare triple as a product of \texttt{Command a}, and the two co
 
 \begin{lstlisting}
 data HoareTriple a = HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
+type ESHT a = Either String (HoareTriple a)
 \end{lstlisting}
 
 \subsubsection{H-Skip}
@@ -795,7 +801,7 @@ data HoareTriple a = HoareTriple (PropCalc (FOL a)) (Command a) (PropCalc (FOL a
 The Haskell implementation of the Hoare skip rule can be represented as follows:
 
 \begin{lstlisting}
-hoareSkip :: PropCalc (FOL a) -> Either String (HoareTriple a)
+hoareSkip :: PropCalc (FOL a) -> ESHT a
 hoareSkip q = Right $ HoareTriple q CSkip q
 \end{lstlisting}
 
@@ -811,7 +817,7 @@ Note that the rule accepts well-formed formulas instead of proven ones, as the v
 Let $Q[E/V]$ denote the expression $Q$ in which each free occurrence of $V$ is replaced with $E$. Given an assignment command $V \texttt{ := } E$, it should produce the triple where the precondition is $Q[E/V]$ and the postcondition is $Q$.
 
 \begin{lstlisting}
-hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> Either String (HoareTriple a)
+hoareAssignment :: Eq a => a -> Arith a -> PropCalc (FOL a) -> ESHT a
 hoareAssignment v e q = Right $ HoareTriple (fromProof (substPropCalc (Proof q) (Var v) e)) (CAssign v e) q
 \end{lstlisting}
 
@@ -827,7 +833,7 @@ $Q$ exactly corresponds to \texttt{substPropCalc} - the implementation relies on
 The consequence rule can be used to strengthen (make more specific) a precondition and/or weaken (make more generic) a postcondition in a Hoare triple. The implication in the consequence rule represents an "evaluation" from the previously defined logic. In other words, the rule provides a way to transform a Hoare triple by embedding the result of an evaluation of a logic (another system) into the same Hoare triple.
 
 \begin{lstlisting}
-hoareConsequence :: Eq a => Proof (PropCalc (FOL a)) -> HoareTriple a -> Proof (PropCalc (FOL a)) -> Either String (HoareTriple a)
+hoareConsequence :: Eq a => Proof (PropCalc (FOL a)) -> HoareTriple a -> Proof (PropCalc (FOL a)) -> ESHT a
 hoareConsequence (Proof (Imp p1 p2)) (HoareTriple p2' c q2) (Proof (Imp q2' q1))
   | p2 == p2' && q2 == q2' = Right $ HoareTriple p1 c q1
 hoareConsequence _ _ _ = Left "hoareConsequence: Cannot construct proof"
@@ -864,7 +870,7 @@ For another example, we can strengthen the precondition:
 For the Hoare sequence rule, given two Hoare triples, the postcondition of the first triple must be equivalent to the precondition of the second triple, for some definition of equivalent; in this specific case, we rely on Haskell's \texttt{Eq}.
 
 \begin{lstlisting}
-hoareSequence :: Eq a => HoareTriple a -> HoareTriple a -> Either String (HoareTriple a)
+hoareSequence :: Eq a => HoareTriple a -> HoareTriple a -> ESHT a
 hoareSequence (HoareTriple p c1 q1) (HoareTriple q2 c2 r)
   | q1 == q2  = Right $ HoareTriple p (CSequence c1 c2) r
 hoareSequence _ _ = Left "hoareSequence: Cannot construct proof"
@@ -886,7 +892,7 @@ Several commands can be sequenced as follows:
 The Hoare conditional rule can be implemented as follows:
 
 \begin{lstlisting}
-hoareConditional :: Eq a => HoareTriple a -> HoareTriple a -> Either String (HoareTriple a)
+hoareConditional :: Eq a => HoareTriple a -> HoareTriple a -> ESHT a
 hoareConditional (HoareTriple (And b1 p1) c1 q1) (HoareTriple (And (Not b2) p2) c2 q2)
   | b1 == b2 && p1 == p2 && q1 == q2  = Right $ HoareTriple p1 (CIfElse b1 c1 c2) q1
 hoareConditional _ _ = Left "hoareConditional: Cannot construct proof"
@@ -931,7 +937,7 @@ Given these two proofs, we can now transform the triple easily, and conclude our
 In this part, we provide the implementation of the last, most important, and complex rule.
 
 \begin{lstlisting}
-hoareWhile :: Eq a => HoareTriple a -> Either String (HoareTriple a)
+hoareWhile :: Eq a => HoareTriple a -> ESHT a
 hoareWhile (HoareTriple (And b p1) c p2)
   | p1 == p2  = Right $ HoareTriple p1 (CWhile b c) (And (Not b) p1)
 hoareWhile _ = Left "hoareWhile: Cannot construct proof"
@@ -949,11 +955,11 @@ Again, for the purposes of example, consider the following command:
 Similarly, as we did in the example for the H-Conditional rule, following the rule to construct a Hoare triple for this command, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
 
 \begin{lstlisting}
-> let ht1 = hoareSkip (PropVar $ Eq Z Z) :: Either String (HoareTriple Integer)
+> let ht1 = hoareSkip (PropVar $ Eq Z Z) :: ESHT Integer
 {0=0} ; {0=0}
-> let pre = ruleFantasy (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) ruleSepR :: Either String (Proof (PropCalc (FOL Integer)))
+> let pre = ruleFantasy (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) ruleSepR :: ESP (FOL Integer)
 |- 0=0 /\ 0=0 -> 0=0
-> let post = ruleFantasy (PropVar $ Eq Z Z) Right :: Either String (Proof (PropCalc (FOL Integer)))
+> let post = ruleFantasy (PropVar $ Eq Z Z) Right :: ESP (FOL Integer)
 |- 0=0 -> 0=0
 > let ht2 = join $ hoareConsequence <$> pre <*> ht1 <*> post
 {0=0 /\ 0=0} ; {0=0}

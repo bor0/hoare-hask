@@ -58,10 +58,10 @@ instance Pretty a => Pretty (FOL a) where
 -- | Apply FOL rule to a specific portion of a formula
 -- Might be useful for some rules that may require drilling, like `ruleInterchangeL`
 -- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed on any variable which appeared bound in the context.
-applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))) -> Proof (PropCalc (FOL a)) -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> ESP (FOL a)) -> Proof (PropCalc (FOL a)) -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
 applyFOLRule xs f (Proof x) ctx = go xs f x [] ctx
   where
-  go :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))) -> PropCalc (FOL a) -> [a] -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+  go :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> ESP (FOL a)) -> PropCalc (FOL a) -> [a] -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
   go [] f x boundVars premises | not (any (`elem` boundVars) (concatMap (getFreeVars . fromProof) premises)) = f (Proof x)
   go (_:xs) f (PropVar (ForAll x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \prfx -> Right $ Proof $ PropVar (ForAll x (fromProof prfx))
   go (_:xs) f (PropVar (Exists x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \prfx -> Right $ Proof $ PropVar (Exists x (fromProof prfx))
@@ -87,7 +87,7 @@ applyArithRule _ _ Z = Z -- nothing to apply for 0
 applyArithRule _ _ (Var x) = Var x -- nothing to apply for a variable
 
 -- Combines applyFOLRule and applyArithRule
-applyFOLArithRule :: Eq a => Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+applyFOLArithRule :: Eq a => Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
 applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Right $ Proof $ go pos (fromProof x)) x []
   where
   go GoLeft (PropVar (Eq x y)) = PropVar (Eq (applyArithRule path2 f x) y)
@@ -182,27 +182,27 @@ getFreeVars x = getVars x \\ getBoundVars x
 {- Axioms -}
 
 -- | Peano axiom 1: forall a, not (S a = 0)
-axiom1 :: Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom1 :: Arith a -> ESP (FOL a)
 axiom1 (Var a) = Right $ Proof $ PropVar (ForAll a (Not (PropVar (Eq (S (Var a)) Z))))
 axiom1 _ = Left "axiom1: Cannot construct proof"
 
 -- | Peano axiom 2: forall a, (a + 0) = a
-axiom2 :: Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom2 :: Arith a -> ESP (FOL a)
 axiom2 (Var a) = Right $ Proof $ PropVar (ForAll a (PropVar (Eq (Plus (Var a) Z) (Var a))))
 axiom2 _ = Left "axiom2: Cannot construct proof"
 
 -- | Peano axiom 3: forall a, forall b, a + Sb = S(a + b)
-axiom3 :: Arith a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom3 :: Arith a -> Arith a -> ESP (FOL a)
 axiom3 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Plus (Var a) (S (Var b))) (S (Plus (Var a) (Var b))))))))
 axiom3 _ _ = Left "axiom3: Cannot construct proof"
 
 -- | Peano axiom 4: forall a, (a * 0) = 0
-axiom4 :: Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom4 :: Arith a -> ESP (FOL a)
 axiom4 (Var a) = Right $ Proof $ PropVar (ForAll a (PropVar (Eq (Mult (Var a) Z) Z)))
 axiom4 _ = Left "axiom4: Cannot construct proof"
 
 -- | Peano axiom 5: forall a, forall b, a * Sb = (a * b + a)
-axiom5 :: Arith a -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+axiom5 :: Arith a -> Arith a -> ESP (FOL a)
 axiom5 (Var a) (Var b) = Right $ Proof $ PropVar (ForAll a (PropVar (ForAll b (PropVar (Eq (Mult (Var a) (S (Var b))) (Plus (Mult (Var a) (Var b)) (Var a)))))))
 axiom5 _ _ = Left "axiom5: Cannot construct proof"
 
@@ -210,38 +210,36 @@ axiom5 _ _ = Left "axiom5: Cannot construct proof"
 
 -- | Rule of Specification
 -- Suppose u is a variable which occurs inside the string x. If the string ∀u:x is a theorem, then so is x, and so are any strings made from x by replacing u, wherever it occurs, by one and the same term. (Restriction: The term which replaces u must not contain any variable that is quantified in x.)
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Either String (Proof (PropCalc (FOL a)))
+ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> ESP (FOL a)
 ruleSpec (Proof (PropVar (ForAll x y))) e | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
 ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> Either String (Proof (PropCalc (FOL a)))
+ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
 ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 
 -- | Rule of Interchange
 -- Suppose u is a variable. Then the strings ∀u:~ and ~∃u: are interchangeable anywhere inside any theorem.
-ruleInterchangeL :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleInterchangeL :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleInterchangeL (Proof (PropVar (ForAll x (Not y)))) = Right $ Proof $ Not (PropVar $ Exists x y)
 ruleInterchangeL _ = Left "ruleInterchangeL: Cannot construct proof"
 
 -- | Rule of Interchange
 -- Suppose u is a variable. Then the strings ∀u:~ and ~∃u: are interchangeable anywhere inside any theorem.
-ruleInterchangeR :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleInterchangeR :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleInterchangeR (Proof (Not (PropVar (Exists x y)))) = Right $ Proof $ PropVar (ForAll x (Not y))
 ruleInterchangeR _ = Left "ruleInterchangeR: Cannot construct proof"
 
 -- | Rule of Existence
 -- Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable which otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> Either String (Proof (PropCalc (FOL a)))
+ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> ESP (FOL a)
 ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
   go f paths >>= \prf -> Right $ Proof $ PropVar (Exists v (fromProof prf))
   where
-  go f ((pos, path1, path2):paths) =
-    let newProof = applyFOLArithRule pos path1 path2 (\_ -> Var v) f
-    in newProof >>= \prf -> go prf paths
+  go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var v) f >>= \prf -> go prf paths
   go x _ = Right x
 ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
   Right $ Proof $ PropVar (Exists v (fromProof f))
@@ -249,31 +247,31 @@ ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 
 -- | Rule of Symmetry
 -- If r=s is a theorem, then so is s=r
-ruleSymmetry :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleSymmetry :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleSymmetry (Proof (PropVar (Eq a b))) = Right $ Proof $ PropVar (Eq b a)
 ruleSymmetry _ = Left "ruleSymmetry: Cannot construct proof"
 
 -- | Rule of Transitivity
 -- If r=s and s=t are theorems, then so is r=t
-ruleTransitivity :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleTransitivity :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleTransitivity (Proof (PropVar (Eq a b))) (Proof (PropVar (Eq b' c))) | b == b' = Right $ Proof $ PropVar (Eq a c)
 ruleTransitivity _ _ = Left "ruleTransitivity: Cannot construct proof"
 
 -- | Rule Add S
 -- If r=t is a theorem, then Sr=St is a theorem.
-ruleAddS :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleAddS :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleAddS (Proof (PropVar (Eq a b))) = Right $ Proof $ PropVar (Eq (S a) (S b))
 ruleAddS _ = Left "ruleAddS: Cannot construct proof"
 
 -- | Rule Drop S
 -- If Sr=St is theorem, then r=t is a theorem.
-ruleDropS :: Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleDropS :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleDropS (Proof (PropVar (Eq (S a) (S b)))) = Right $ Proof $ PropVar (Eq a b)
 ruleDropS _ = Left "ruleDropS: Cannot construct proof"
 
 -- | Rule of Induction
 -- Let X{u} represent a well-formed formula in which the variable u is free, and X{x/u} represent the same string, with each appearance of u replaced by x. If both ∀u:<X{u}⊃X{Su/u}> and X{0/u} are theorems, then ∀u:X{u} is also a theorem.
-ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> Either String (Proof (PropCalc (FOL a)))
+ruleInduction :: Eq a => Proof (PropCalc (FOL a)) -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleInduction base (Proof ih@(PropVar (ForAll x (Imp y z)))) =
   -- in base' and conc, y is Proof y because it's an assumption
   let base' = substPropCalc (Proof y) (Var x) Z
