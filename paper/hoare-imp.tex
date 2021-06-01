@@ -836,26 +836,26 @@ hoareConsequence _ _ _ = Left "hoareConsequence: Cannot construct proof"
 For example, considering the \texttt{hoareAssignment} example we saw earlier, we can weaken its postcondition:
 
 \begin{lstlisting}
-> let eg = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
+> let ht = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0 /\ 0=0}
 > let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) Right
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0 /\ 0=0
 > let post = ruleFantasy (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
 |- A=SS0 /\ 0=0 -> A=SS0
-> putStrLn $ pr $ join $ hoareConsequence <$> pre <*> eg <*> post
+> putStrLn $ pr $ join $ hoareConsequence <$> pre <*> ht <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
 \end{lstlisting}
 
 For another example, we can strengthen the precondition:
 
 \begin{lstlisting}
-> let eg = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
+> let ht = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
 {B+S0=SS0} A := B+S0; {A=SS0}
 > let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0
 > let post = ruleFantasy (PropVar (Eq (Var A) (S (S Z)))) Right
 |- A=SS0 -> A=SS0
-> putStrLn $ pr $ join $ hoareConsequence <$> pre <*> eg <*> post
+> putStrLn $ pr $ join $ hoareConsequence <$> pre <*> ht <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
 \end{lstlisting}
 
@@ -902,9 +902,9 @@ For the purposes of example, we start by considering the command:
 Following the rule to construct a Hoare triple for this command, we can notice that the conditionals $B$ and $P$ are given in the code, so we have to construct the two triples $\{A \neq 0 \land P\} \texttt{ ; } \{Q\}$ and $\{\neg(A \neq 0) \land P\} A \texttt{ := } 1 + A; \{Q\}$.
 
 \begin{lstlisting}
-> let eg1 = hoareSkip (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let ht1 = hoareSkip (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 {~A=0 /\ 0=0} ; {~A=0 /\ 0=0}
-> let eg2 = hoareAssignment A (S (Var A)) (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
+> let ht2 = hoareAssignment A (S (Var A)) (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 {~SA=0 /\ 0=0} A := SA; {~A=0 /\ 0=0}
 \end{lstlisting}
 
@@ -920,9 +920,9 @@ The next thing to do is to transform the precondition of the second triple to ma
 Given these two proofs, we can now transform the triple easily, and conclude our proof:
 
 \begin{lstlisting}
-> let eg3 = join $ hoareConsequence <$> prf1 <*> eg2 <*> prf2
+> let ht3 = join $ hoareConsequence <$> prf1 <*> ht2 <*> prf2
 {A=0 /\ 0=0} A := SA; {~A=0 /\ 0=0}
-> putStrLn $ pr $ join $ hoareConditional <$> eg3 <*> eg1
+> putStrLn $ pr $ join $ hoareConditional <$> ht3 <*> ht1
 {0=0} (If (A=0) Then (A := SA;) Else (;)); {~A=0 /\ 0=0}
 \end{lstlisting}
 
@@ -949,20 +949,20 @@ Again, for the purposes of example, consider the following command:
 Similarly, as we did in the example for the H-Conditional rule, following the rule to construct a Hoare triple for this command, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
 
 \begin{lstlisting}
-> let c = hoareSkip (PropVar $ Eq Z Z) :: Either String (HoareTriple Integer)
+> let ht1 = hoareSkip (PropVar $ Eq Z Z) :: Either String (HoareTriple Integer)
 {0=0} ; {0=0}
 > let pre = ruleFantasy (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) ruleSepR :: Either String (Proof (PropCalc (FOL Integer)))
 |- 0=0 /\ 0=0 -> 0=0
 > let post = ruleFantasy (PropVar $ Eq Z Z) Right :: Either String (Proof (PropCalc (FOL Integer)))
 |- 0=0 -> 0=0
-> let egTriple = join $ hoareConsequence <$> pre <*> c <*> post
+> let ht2 = join $ hoareConsequence <$> pre <*> ht1 <*> post
 {0=0 /\ 0=0} ; {0=0}
 \end{lstlisting}
 
 Now we can deduce a triple which states that from an infinite loop, anything follows (contradiction); our implementation does not support proving total correctness (termination).
 
 \begin{lstlisting}
-> putStrLn $ pr $ egTriple >>= hoareWhile
+> putStrLn $ pr $ ht2 >>= hoareWhile
 {0=0} (While (0=0) Do {;}); {~0=0 /\ 0=0}
 \end{lstlisting}
 
