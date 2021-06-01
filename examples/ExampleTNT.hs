@@ -8,14 +8,6 @@ import TNT
 
 -- | Session 1
 -- |- <~<a> -> <b>> -> <<a> /\ <~b>>
-s1lemma1 a b = ruleFantasy f (Not (Imp a b))
-  where
-  f premise =
-   applyPropRule [GoLeft,GoLeft] ruleDoubleTildeIntro premise >>= \step1 ->
-   applyPropRule [GoLeft] (ruleSwitcheroo) step1 >>= \step2 ->
-   ruleDeMorgan step2 >>= \step3 ->
-   applyPropRule [GoLeft] (ruleDoubleTildeElim) step3
-
 lemma1 =
   -- |- All A:All B:(A+SB=S(A+B))
   axiom3 (Var A) (Var B) >>= \step1 ->
