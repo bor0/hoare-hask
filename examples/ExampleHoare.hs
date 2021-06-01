@@ -1,6 +1,7 @@
 module ExampleHoare where
 
 import Common
+import Control.Monad (join)
 import ExampleCommon
 import ExampleTNT
 import Gentzen
@@ -44,13 +45,13 @@ post = ruleFantasy Right (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C))
 step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
 
 -- {~A=B /\ Exists C:(A+C=B)} A := SA; {Exists C:(A+C=B)}
-step4 = pre >>= \pre -> post >>= \post -> step5 >>= \step5 -> hoareConsequence pre step5 post
+step4 = join $ hoareConsequence <$> pre <*> step5 <*> post
 
 -- {Exists C:(0+C=B)} A := 0; {Exists C:(A+C=B)}
 step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
 
 -- {Exists C:(A+C=B)} (While (~A=B) Do {A := SA;}); {~~A=B /\ Exists C:(A+C=B)}
-step3 = step4 >>= \step4 -> hoareWhile step4
+step3 = join $ hoareWhile <$> step4
 
 -- {Exists C:(0+C=B)} A := 0; (While (~A=B) Do {A := SA;}); {~~A=B /\ Exists C:(A+C=B)}
-proof = step2 >>= \step2 -> step3 >>= \step3 -> hoareSequence step2 step3
+proof = join $ hoareSequence <$> step2 <*> step3

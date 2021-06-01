@@ -5,6 +5,7 @@ import ExampleCommon
 import Gentzen
 import PrettyPrinter
 import TNT
+import Control.Monad (join)
 
 -- | Session 1
 -- |- <~<a> -> <b>> -> <<a> /\ <~b>>
@@ -66,4 +67,4 @@ lemma2 =
   ruleGeneralize step11 D Nothing
 
 -- |- All C:All D:(D+SC=SD+C)
-theorem = lemma2 >>= \lemma2 -> lemma1 >>= \lemma1 -> ruleInduction lemma2 lemma1
+theorem = join $ ruleInduction <$> lemma2 <*> lemma1

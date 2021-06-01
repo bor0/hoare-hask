@@ -157,7 +157,7 @@ ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in other rules we accept proven terms; the hypothesis needn't be necessarily true, it only states that "If this hypothesis were a theorem, that would be a theorem". We also rely on Haskell's machinery for functions (lambda calculus) to take care of doing the actual work - we get support for \textbf{Carry Over Rule} out of the box as well.
 
 \begin{lstlisting}
-> putStrLn $ pr $ ruleFantasy (\pq -> ruleSepR pq >>= \q -> ruleSepL pq >>= \p -> ruleJoin q p) (And (PropVar A) (PropVar B))
+> putStrLn $ pr $ ruleFantasy (\pq -> join $ ruleJoin <$> ruleSepR pq <*> ruleSepL pq) (And (PropVar A) (PropVar B))
 |- A /\ B -> B /\ A
 \end{lstlisting}
 
@@ -477,7 +477,7 @@ $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:
 
 \begin{lstlisting}
 -- |- All C:All D:(D+SC=SD+C)
-theorem = lemma2 >>= \lemma2 -> lemma1 >>= \lemma1 -> ruleInduction lemma2 lemma1
+theorem = join $ ruleInduction <$> lemma2 <*> lemma1
 \end{lstlisting}
 \end{minipage}
 
@@ -845,7 +845,7 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0 /\ 0=0
 > let post = ruleFantasy ruleSepL $ And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))
 |- A=SS0 /\ 0=0 -> A=SS0
-> putStrLn $ pr $ pre >>= \pre -> eg >>= \eg -> post >>= \post -> hoareConsequence pre eg post
+> putStrLn $ pr $ join $ hoareConsequence <$> pre <*> eg <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
 \end{lstlisting}
 
@@ -858,7 +858,7 @@ For another example, we can strengthen the precondition:
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0
 > let post = ruleFantasy Right $ PropVar (Eq (Var A) (S (S Z)))
 |- A=SS0 -> A=SS0
-> putStrLn $ pr $ pre >>= \pre -> eg >>= \eg -> post >>= \post -> hoareConsequence pre eg post
+> putStrLn $ pr $ join $ hoareConsequence <$> pre <*> eg <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
 \end{lstlisting}
 
@@ -880,7 +880,7 @@ Several commands can be sequenced as follows:
 {0=0 /\ A=A} B := 0; {B=0 /\ A=A}
 > let c2 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var C) (Var A)))
 {B=0 /\ A=A} C := A; {B=0 /\ C=A}
-> putStrLn $ pr $ c1 >>= \c1 -> c2 >>= \c2 -> hoareSequence c1 c2
+> putStrLn $ pr $ join $ hoareSequence <$> c1 <*> c2
 {0=0 /\ A=A} B := 0; C := A; {B=0 /\ C=A}
 \end{lstlisting}
 
@@ -914,6 +914,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
+TODO
 > let prf1 = ruleFantasy (\pq -> ruleSepR pq >>= \q -> axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A) >>= \ax1A -> ruleJoin ax1A q) (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
 > let prf2 = ruleFantasy Right $ (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
@@ -923,9 +924,9 @@ The next thing to do is to transform the precondition of the second triple to ma
 Given these two proofs, we can now transform the triple easily, and conclude our proof:
 
 \begin{lstlisting}
-> let eg3 = prf1 >>= \prf1 -> eg2 >>= \eg2 -> prf2 >>= \prf2 -> hoareConsequence prf1 eg2 prf2
+> let eg3 = join $ hoareConsequence <$> prf1 <*> eg2 <*> prf2
 {A=0 /\ 0=0} A := SA; {~A=0 /\ 0=0}
-> putStrLn $ pr $ eg1 >>= \eg1 -> eg3 >>= \eg3 -> hoareConditional eg3 eg1
+> putStrLn $ pr $ join $ hoareConditional <$> eg3 <*> eg1
 {0=0} (If (A=0) Then (A := SA;) Else (;)); {~A=0 /\ 0=0}
 \end{lstlisting}
 
@@ -958,7 +959,7 @@ Similarly, as we did in the example for the H-Conditional rule, following the ru
 |- 0=0 /\ 0=0 -> 0=0
 > let post = ruleFantasy Right (PropVar $ Eq Z Z) :: Either String (Proof (PropCalc (FOL Integer)))
 |- 0=0 -> 0=0
-> let egTriple = pre >>= \pre -> c >>= \c -> post >>= \post -> hoareConsequence pre c post
+> let egTriple = join $ hoareConsequence <$> pre <*> c <*> post
 {0=0 /\ 0=0} ; {0=0}
 \end{lstlisting}
 
@@ -992,9 +993,9 @@ Further, since this rule has to be followed in sequence with the assignment rule
 The only thing remaining to prove is the hypothesis for the H-While rule, so we have the following code:
 
 \begin{lstlisting}
-proof = step2 >>= \step2 -> step3 >>= \step3 -> hoareSequence step2 step3
+proof = join $ hoareSequence <$> step2 <*> step3
 step2 = hoareAssignment A Z (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-step3 = step4 >>= \step4 -> hoareWhile step4
+step3 = join $ hoareWhile <$> step4
 \end{lstlisting}
 
 To start figuring out \texttt{step4}, we consider the following code:
@@ -1010,7 +1011,7 @@ $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 \begin{lstlisting}
 pre   = ???
 post  = ruleFantasy Right (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-step4 = pre >>= \pre -> post >>= \post -> step5 >>= \step5 -> hoareConsequence pre step5 post
+step4 = join $ hoareConsequence <$> pre <*> step5 <*> post
 \end{lstlisting}
 
 Here's the complete proof for the preconditional part:
@@ -1021,7 +1022,7 @@ pre = ruleFantasy f premise where
   -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
   f premise = go >>= \go -> ruleExistence go C [] where
     -- |- ~~Exists C:(A+C=B)
-    go = ruleSepR premise >>= \foo -> ruleDoubleTildeIntro foo >>= \step1 ->
+    go = ruleSepR premise >>= \premiseR -> ruleDoubleTildeIntro premiseR >>= \step1 ->
          -- |- ~~A+SC=B
          applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \rir -> ruleSpec rir (S (Var C))) step1 Nothing >>= \step2 ->
          -- |- A+SC=B
