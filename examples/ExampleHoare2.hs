@@ -1,6 +1,7 @@
 module ExampleHoare2 where
 
 import Common
+import Control.Monad (join)
 import ExampleCommon
 import Gentzen
 import Hoare
@@ -27,4 +28,4 @@ ht2 = hoareAssignment A (Var B) (And (PropVar $ Eq (Var C) (Var D)) (PropVar $ E
 ht3 = hoareAssignment B (Var C) (And (PropVar $ Eq (Var B) (Var D)) (PropVar $ Eq (Var A) (Var E)))
 
 -- {A=D /\ B=E} C := A; A := B; B := C; {B=D /\ A=E}
-proof = fromRight $ hoareSequence ht1 (fromRight $ hoareSequence ht2 ht3)
+proof = join $ hoareSequence <$> ht1 <*> join (hoareSequence <$> ht2 <*> ht3)
