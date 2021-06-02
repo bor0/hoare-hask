@@ -126,7 +126,7 @@ These rules come from GEB, and we list them here for posterity:
 \item \textbf{Switcheroo Rule}: $<x \lor y>$ and $<\neg x \to y>$ are interchangeable.
 \end{itemize}
 
-In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms. We create a wrapper for that:
+In Coq, each implementation of the rules would be represented at the type level. However, since we're working at the value level in Haskell, we rely on the \texttt{Either} data type to distinguish between provable and not provable terms; this abstraction increases complexity but allows for graceful error handling. We create a wrapper for that:
 
 \begin{lstlisting}
 type ESP a = Either String (Proof (PropCalc a))
