@@ -46,4 +46,5 @@ instance Applicative (Either e) where
 instance Monad (Either e) where
   Left  l >>= _ = Left l
   Right r >>= k = k r
+  return        = Right
 #endif
