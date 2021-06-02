@@ -147,7 +147,9 @@ ruleSepR (Proof (And x y)) = Right $ Proof y
 ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 \end{lstlisting}
 
-That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
+That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Even though \texttt{ruleJoin} cannot fail (always returns a proof), it's still a good practice to return \texttt{ESP} for easy composition between rules.
+
+Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \textbf{Rule of Detachment}:
 
 \begin{lstlisting}
 ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> ESP a) -> ESP a
@@ -537,12 +539,12 @@ We list the evaluation rules for arithmetic expressions:
 The arrow symbol $\underset{ctx}{\to}$ in the rules represents the actual evaluation of arithmetic expressions under context $ctx$.
 
 \begin{lstlisting}
-aeval :: (Ord a, Eq a) => Context a -> Arith a -> Integer
-aeval ctx (Var v)        = ctx M.! v -- element may not exist
-aeval ctx Z              = 0
-aeval ctx (S x)          = 1 + aeval ctx x
-aeval ctx (Plus a1 a2)   = aeval ctx a1 + aeval ctx a2
-aeval ctx (Mult a1 a2)   = aeval ctx a1 * aeval ctx a2
+aeval :: (Ord a, Eq a) => Context a -> Arith a -> Either String Integer
+aeval ctx (Var v)        = if M.member v ctx then Right (ctx M.! v) else Left "Element not found"
+aeval ctx Z              = Right 0
+aeval ctx (S x)          = aeval ctx x >>= \x -> Right $ x + 1
+aeval ctx (Plus a1 a2)   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 + a2
+aeval ctx (Mult a1 a2)   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 * a2
 \end{lstlisting}
 
 Further, we provide the evaluation rules for boolean expressions:
@@ -588,14 +590,14 @@ Further, we provide the evaluation rules for boolean expressions:
 Similarly, the double right arrow symbol $\underset{ctx}{\Rightarrow}$ in the rules represents the actual evaluation of boolean expressions under context $ctx$.
 
 \begin{lstlisting}
-beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Bool
-beval ctx (PropVar (Eq x y))     = aeval ctx x == aeval ctx y
+beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Either String Bool
+beval ctx (PropVar (Eq x y))     = aeval ctx x >>= \x -> aeval ctx y >>= \y -> Right $ x == y
 beval ctx (PropVar (ForAll x y)) = beval ctx y
 beval ctx (PropVar (Exists x y)) = beval ctx y
-beval ctx (Not b1)               = not (beval ctx b1)
-beval ctx (And b1 b2)            = beval ctx b1 && beval ctx b2
-beval ctx (Or b1 b2)             = beval ctx b1 || beval ctx b2
-beval ctx (Imp b1 b2)            = not (beval ctx b1) || beval ctx b2
+beval ctx (Not b1)               = beval ctx b1 >>= \b1 -> Right $ not b1
+beval ctx (And b1 b2)            = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 && b2
+beval ctx (Or b1 b2)             = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 || b2
+beval ctx (Imp b1 b2)            = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ not b1 || b2
 \end{lstlisting}
 
 Note that we ignore quantifiers in this implementation because we only rely on propositional logic and substitute variables based on the context.
@@ -693,17 +695,18 @@ The map arrow symbol $\underset{ctx}{\mapsto}$ in the rules represents the actua
 \begin{lstlisting}
 eval :: (Ord a, Eq a) => Context a -> Command a -> Either String (Context a)
 eval ctx CSkip             = Right ctx
-eval ctx (CAssign c v)     = Right $ M.insert c (aeval ctx v) ctx
+eval ctx (CAssign c v)     = aeval ctx v >>= \v -> Right $ M.insert c v ctx
 eval ctx (CSequence c1 c2) = let ctx' = eval ctx c1 in ctx' >>= (\ctx'' -> eval ctx'' c2)
-eval ctx (CIfElse b c1 c2) = eval ctx $ if beval ctx b then c1 else c2
-eval ctx (CWhile b c)      =
-  if beval ctx b
+eval ctx (CIfElse b c1 c2) = beval ctx b >>= \b -> eval ctx $ if b then c1 else c2
+eval ctx (CWhile b c)      = beval ctx b >>= \b' ->
+  if b'
   then let ctx' = eval ctx c in ctx' >>= (\ctx'' -> eval ctx'' (CWhile b c))
   else Right ctx
-eval ctx (CAssert b1 c b2) =
-  if beval ctx b1
+eval ctx (CAssert b1 c b2) = beval ctx b1 >>= \b1 ->
+  if b1
   then eval ctx c >>=
-       (\ctx' -> if beval ctx' b2
+       (\ctx' -> beval ctx' b2 >>= \b2 ->
+                  if b2
                   then Right ctx'
                   else Left "Assert: Post-condition does not match!")
   else Left "Assert: Pre-condition does not match!"
