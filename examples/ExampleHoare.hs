@@ -40,7 +40,7 @@ pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (
     ruleExistence step6 C []
 
 -- |- Exists C:(A+C=B) -> Exists C:(A+C=B)
-post = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) Right
+post = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) return
 
 -- {Exists C:(SA+C=B)} A := SA; {Exists C:(A+C=B)}
 step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))

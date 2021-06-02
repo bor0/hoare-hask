@@ -847,7 +847,7 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 \begin{lstlisting}
 > let ht = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0 /\ 0=0}
-> let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) Right
+> let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) return
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0 /\ 0=0
 > let post = ruleFantasy (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
 |- A=SS0 /\ 0=0 -> A=SS0
@@ -862,7 +862,7 @@ For another example, we can strengthen the precondition:
 {B+S0=SS0} A := B+S0; {A=SS0}
 > let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
 |- B+S0=SS0 /\ 0=0 -> B+S0=SS0
-> let post = ruleFantasy (PropVar (Eq (Var A) (S (S Z)))) Right
+> let post = ruleFantasy (PropVar (Eq (Var A) (S (S Z)))) return
 |- A=SS0 -> A=SS0
 > putStrLn $ pr $ join $ hoareConsequence <$> pre <*> ht <*> post
 {B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0}
@@ -922,7 +922,7 @@ The next thing to do is to transform the precondition of the second triple to ma
 \begin{lstlisting}
 > let prf1 = ruleFantasy (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A)) <*> ruleSepR pq)
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
-> let prf2 = ruleFantasy (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) Right
+> let prf2 = ruleFantasy (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) return
 |- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0
 \end{lstlisting}
 
@@ -962,7 +962,7 @@ Similarly, as we did in the example for the H-Conditional rule, following the ru
 {0=0} ; {0=0}
 > let pre = ruleFantasy (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) ruleSepR :: ESP (FOL Integer)
 |- 0=0 /\ 0=0 -> 0=0
-> let post = ruleFantasy (PropVar $ Eq Z Z) Right :: ESP (FOL Integer)
+> let post = ruleFantasy (PropVar $ Eq Z Z) return :: ESP (FOL Integer)
 |- 0=0 -> 0=0
 > let ht2 = join $ hoareConsequence <$> pre <*> ht1 <*> post
 {0=0 /\ 0=0} ; {0=0}
@@ -1015,7 +1015,7 @@ $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 
 \begin{lstlisting}
 pre   = ???
-post  = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) Right
+post  = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) return
 step4 = join $ hoareConsequence <$> pre <*> step5 <*> post
 \end{lstlisting}
 
