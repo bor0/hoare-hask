@@ -34,13 +34,13 @@ applyPropRule :: Path -> (Proof (PropCalc a) -> ESP a) -> Proof (PropCalc a) -> 
 applyPropRule xs f (Proof x) = go xs f x
   where
   go :: Path -> (Proof (PropCalc a) -> ESP a) -> PropCalc a -> ESP a
-  go (_:xs) f (Not x)         = go xs f x >>= \prfx -> Right $ Proof $ Not (fromProof prfx)
-  go (GoLeft:xs) f (And x y)  = go xs f x >>= \prfx -> Right $ Proof $ And (fromProof prfx) y
-  go (GoLeft:xs) f (Or x y)   = go xs f x >>= \prfx -> Right $ Proof $ Or (fromProof prfx) y
-  go (GoLeft:xs) f (Imp x y)  = go xs f x >>= \prfx -> Right $ Proof $ Imp (fromProof prfx) y
-  go (GoRight:xs) f (And x y) = go xs f y >>= \prfy -> Right $ Proof $ And x (fromProof prfy)
-  go (GoRight:xs) f (Or x y)  = go xs f y >>= \prfy -> Right $ Proof $ Or x (fromProof prfy)
-  go (GoRight:xs) f (Imp x y) = go xs f y >>= \prfy -> Right $ Proof $ Imp x (fromProof prfy)
+  go (_:xs) f (Not x)         = go xs f x >>= \(Proof x) -> Right $ Proof $ Not x
+  go (GoLeft:xs) f (And x y)  = go xs f x >>= \(Proof x) -> Right $ Proof $ And x y
+  go (GoLeft:xs) f (Or x y)   = go xs f x >>= \(Proof x) -> Right $ Proof $ Or x y
+  go (GoLeft:xs) f (Imp x y)  = go xs f x >>= \(Proof x) -> Right $ Proof $ Imp x y
+  go (GoRight:xs) f (And x y) = go xs f y >>= \(Proof y) -> Right $ Proof $ And x y
+  go (GoRight:xs) f (Or x y)  = go xs f y >>= \(Proof y) -> Right $ Proof $ Or x y
+  go (GoRight:xs) f (Imp x y) = go xs f y >>= \(Proof y) -> Right $ Proof $ Imp x y
   go _ f x = f (Proof x)
 
 {- Rules -}
@@ -79,7 +79,7 @@ ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 -- Imp intro accepts a rule and an assumption (simply a well-formed formula, not necessarily proven)
 -- Our data types are constructed such that all formulas are well-formed
 ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> ESP a) -> ESP a
-ruleFantasy x f = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
+ruleFantasy x f = f (Proof x) >>= \(Proof y) -> Right $ Proof $ Imp x y
 
 -- | Rule of Detachment
 -- If x and <x⊃y> are both theorems, then y is a theorem.

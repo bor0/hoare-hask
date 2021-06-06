@@ -153,7 +153,7 @@ Perhaps the most powerful rule is \textbf{Fantasy Rule}, and its counter-part \t
 
 \begin{lstlisting}
 ruleFantasy :: PropCalc a -> (Proof (PropCalc a) -> ESP a) -> ESP a
-ruleFantasy x f = f (Proof x) >>= \prfx -> Right $ Proof $ Imp x (fromProof prfx)
+ruleFantasy x f = f (Proof x) >>= \(Proof y) -> Right $ Proof $ Imp x y
 
 ruleDetachment :: Eq a => Proof (PropCalc a) -> Proof (PropCalc a) -> ESP a
 ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
@@ -193,13 +193,13 @@ applyPropRule :: Path -> (Proof (PropCalc a) -> ESP a) -> Proof (PropCalc a) -> 
 applyPropRule xs f (Proof x) = go xs f x
   where
   go :: Path -> (Proof (PropCalc a) -> ESP a) -> PropCalc a -> ESP a
-  go (_:xs) f (Not x)         = go xs f x >>= \prfx -> Right $ Proof $ Not (fromProof prfx)
-  go (GoLeft:xs) f (And x y)  = go xs f x >>= \prfx -> Right $ Proof $ And (fromProof prfx) y
-  go (GoLeft:xs) f (Or x y)   = go xs f x >>= \prfx -> Right $ Proof $ Or (fromProof prfx) y
-  go (GoLeft:xs) f (Imp x y)  = go xs f x >>= \prfx -> Right $ Proof $ Imp (fromProof prfx) y
-  go (GoRight:xs) f (And x y) = go xs f y >>= \prfy -> Right $ Proof $ And x (fromProof prfy)
-  go (GoRight:xs) f (Or x y)  = go xs f y >>= \prfy -> Right $ Proof $ Or x (fromProof prfy)
-  go (GoRight:xs) f (Imp x y) = go xs f y >>= \prfy -> Right $ Proof $ Imp x (fromProof prfy)
+  go (_:xs) f (Not x)         = go xs f x >>= \(Proof x) -> Right $ Proof $ Not x
+  go (GoLeft:xs) f (And x y)  = go xs f x >>= \(Proof x) -> Right $ Proof $ And x y
+  go (GoLeft:xs) f (Or x y)   = go xs f x >>= \(Proof x) -> Right $ Proof $ Or x y
+  go (GoLeft:xs) f (Imp x y)  = go xs f x >>= \(Proof x) -> Right $ Proof $ Imp x y
+  go (GoRight:xs) f (And x y) = go xs f y >>= \(Proof y) -> Right $ Proof $ And x y
+  go (GoRight:xs) f (Or x y)  = go xs f y >>= \(Proof y) -> Right $ Proof $ Or x y
+  go (GoRight:xs) f (Imp x y) = go xs f y >>= \(Proof y) -> Right $ Proof $ Imp x y
   go _ f x = f (Proof x)
 \end{lstlisting}
 
@@ -323,8 +323,8 @@ getArithVars x = nub $ go x where
 \begin{lstlisting}
 getBoundVars :: Eq a => PropCalc (FOL a) -> [a]
 getBoundVars x = nub $ go x where
-  go (PropVar (ForAll s e)) = s : go e
-  go (PropVar (Exists s e)) = s : go e
+  go (PropVar (ForAll x y)) = x : go y
+  go (PropVar (Exists x y)) = x : go y
   go _ = []
 \end{lstlisting}
 \end{minipage}
@@ -341,8 +341,8 @@ We can also implement \textbf{Rule of Generalization} as follows:
 
 \begin{lstlisting}
 ruleGeneralize :: Eq a => a -> [Proof (PropCalc (FOL a))] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
-ruleGeneralize v premises (Proof f) | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
-  = Right $ Proof $ PropVar (ForAll v f)
+ruleGeneralize x premises (Proof y) | x `notElem` getBoundVars y && x `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
+  = Right $ Proof $ PropVar (ForAll x y)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 \end{lstlisting}
 
@@ -362,13 +362,13 @@ Now, \textbf{Rule of Existence} can be implemented as follows:
 
 \begin{lstlisting}
 ruleExistence :: Eq a => a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
-ruleExistence v paths f | allSame (map (\path -> getTerm path $ fromProof f) paths) =
-  go f paths >>= \prf -> Right $ Proof $ PropVar (Exists v (fromProof prf))
+ruleExistence x paths (Proof y) | allSame (map (\path -> getTerm path y) paths) =
+  go (Proof y) paths >>= \(Proof y) -> Right $ Proof $ PropVar (Exists x y)
   where
-  go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var v) f >>= \prf -> go prf paths
+  go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var x) f >>= \prf -> go prf paths
   go x _ = Right x
-ruleExistence v [] f | v `notElem` getBoundVars (fromProof f) =
-  Right $ Proof $ PropVar (Exists v (fromProof f))
+ruleExistence x [] (Proof y) | x `notElem` getBoundVars y =
+  Right $ Proof $ PropVar (Exists x y)
 ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 \end{lstlisting}
 

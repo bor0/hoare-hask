@@ -63,15 +63,15 @@ applyFOLRule xs f ctx (Proof x) = go xs f x [] ctx
   where
   go :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> ESP (FOL a)) -> PropCalc (FOL a) -> [a] -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
   go [] f x boundVars premises | not (any (`elem` boundVars) (concatMap (getFreeVars . fromProof) premises)) = f (Proof x)
-  go (_:xs) f (PropVar (ForAll x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \prfx -> Right $ Proof $ PropVar (ForAll x (fromProof prfx))
-  go (_:xs) f (PropVar (Exists x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \prfx -> Right $ Proof $ PropVar (Exists x (fromProof prfx))
-  go (_:xs) f (Not x) boundVars ctx                = go xs f x boundVars ctx >>= \prfx -> Right $ Proof $ Not (fromProof prfx)
-  go (GoLeft:xs) f (And x y) boundVars ctx         = go xs f x boundVars ctx >>= \prfx -> Right $ Proof $ And (fromProof prfx) y
-  go (GoLeft:xs) f (Imp x y) boundVars ctx         = go xs f x boundVars ctx >>= \prfx -> Right $ Proof $ Imp (fromProof prfx) y
-  go (GoLeft:xs) f (Or x y) boundVars ctx          = go xs f x boundVars ctx >>= \prfx -> Right $ Proof $ Or (fromProof prfx) y
-  go (GoRight:xs) f (And x y) boundVars ctx        = go xs f y boundVars ctx >>= \prfy -> Right $ Proof $ And x (fromProof prfy)
-  go (GoRight:xs) f (Imp x y) boundVars ctx        = go xs f y boundVars ctx >>= \prfy -> Right $ Proof $ Imp x (fromProof prfy)
-  go (GoRight:xs) f (Or x y) boundVars ctx         = go xs f y boundVars ctx >>= \prfy -> Right $ Proof $ Or x (fromProof prfy)
+  go (_:xs) f (PropVar (ForAll x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \(Proof y) -> Right $ Proof $ PropVar (ForAll x y)
+  go (_:xs) f (PropVar (Exists x y)) boundVars ctx = go xs f y (x : boundVars) ctx >>= \(Proof y) -> Right $ Proof $ PropVar (Exists x y)
+  go (_:xs) f (Not x) boundVars ctx                = go xs f x boundVars ctx >>= \(Proof x) -> Right $ Proof $ Not x
+  go (GoLeft:xs) f (And x y) boundVars ctx         = go xs f x boundVars ctx >>= \(Proof x) -> Right $ Proof $ And x y
+  go (GoLeft:xs) f (Imp x y) boundVars ctx         = go xs f x boundVars ctx >>= \(Proof x) -> Right $ Proof $ Imp x y
+  go (GoLeft:xs) f (Or x y) boundVars ctx          = go xs f x boundVars ctx >>= \(Proof x) -> Right $ Proof $ Or x y
+  go (GoRight:xs) f (And x y) boundVars ctx        = go xs f y boundVars ctx >>= \(Proof y) -> Right $ Proof $ And x y
+  go (GoRight:xs) f (Imp x y) boundVars ctx        = go xs f y boundVars ctx >>= \(Proof y) -> Right $ Proof $ Imp x y
+  go (GoRight:xs) f (Or x y) boundVars ctx         = go xs f y boundVars ctx >>= \(Proof y) -> Right $ Proof $ Or x y
   go _ _ _ _ _ = Left "applyFOLRule: Cannot apply rule"
 
 -- Similar to applyFOLRule, but useful for terms within formulas (used by existence rule)
@@ -88,7 +88,7 @@ applyArithRule _ _ (Var x) = Var x -- nothing to apply for a variable
 
 -- Combines applyFOLRule and applyArithRule
 applyFOLArithRule :: Eq a => Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
-applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Right $ Proof $ go pos (fromProof x)) [] x
+applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\(Proof y) -> Right $ Proof $ go pos y) [] x
   where
   go GoLeft (PropVar (Eq x y)) = PropVar (Eq (applyArithRule path2 f x) y)
   go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))
@@ -149,8 +149,8 @@ substPropCalc (Proof f) v e = Proof $ go f v e
 getBoundVars :: Eq a => PropCalc (FOL a) -> [a]
 getBoundVars x = nub $ go x
   where
-  go (PropVar (ForAll s e)) = s : go e
-  go (PropVar (Exists s e)) = s : go e
+  go (PropVar (ForAll x y)) = x : go y
+  go (PropVar (Exists x y)) = x : go y
   go _ = []
 
 -- Get all variables used in an arithmetic formula
@@ -167,8 +167,8 @@ getArithVars x = nub $ go x
 getVars :: Eq a => PropCalc (FOL a) -> [a]
 getVars x = nub $ go x
   where
-  go (PropVar (ForAll s e)) = go e
-  go (PropVar (Exists s e)) = go e
+  go (PropVar (ForAll x y)) = go y
+  go (PropVar (Exists x y)) = go y
   go (PropVar (Eq a b)) = getArithVars a ++ getArithVars b
   go (Not x) = go x
   go (And x y) = go x ++ go y
@@ -217,8 +217,8 @@ ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
 ruleGeneralize :: Eq a => a -> [Proof (PropCalc (FOL a))] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
-ruleGeneralize v premises (Proof f) | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
-  = Right $ Proof $ PropVar (ForAll v f)
+ruleGeneralize x premises (Proof y) | x `notElem` getBoundVars y && x `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
+  = Right $ Proof $ PropVar (ForAll x y)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 
 -- | Rule of Interchange
@@ -236,13 +236,13 @@ ruleInterchangeR _ = Left "ruleInterchangeR: Cannot construct proof"
 -- | Rule of Existence
 -- Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable which otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
 ruleExistence :: Eq a => a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
-ruleExistence v paths f | allSame (map (\path -> getTerm path $ fromProof f) paths) =
-  go f paths >>= \prf -> Right $ Proof $ PropVar (Exists v (fromProof prf))
+ruleExistence x paths (Proof y) | allSame (map (\path -> getTerm path y) paths) =
+  go (Proof y) paths >>= \(Proof y) -> Right $ Proof $ PropVar (Exists x y)
   where
-  go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var v) f >>= \prf -> go prf paths
+  go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var x) f >>= \prf -> go prf paths
   go x _ = Right x
-ruleExistence v [] f | v `notElem` getBoundVars (fromProof f) =
-  Right $ Proof $ PropVar (Exists v (fromProof f))
+ruleExistence x [] (Proof y) | x `notElem` getBoundVars y =
+  Right $ Proof $ PropVar (Exists x y)
 ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 
 -- | Rule of Symmetry
