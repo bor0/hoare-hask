@@ -8,6 +8,8 @@ import PrettyPrinter
 import TNT
 
 main = do
+  putStrLn "Specific example"
+  putStrLn $ pr thm
   putStrLn "Addition"
   mapM_ (\(n,p) -> putStrLn $ show n ++ ": " ++ pr p) $ zip [1..] [prop1,prop2,prop3,prop4,prop5]
   putStrLn "Multiplication"
@@ -15,6 +17,12 @@ main = do
   putStrLn "Example strictness of `applyFOLRule`"
   putStrLn $ pr $ let formula = Proof $ And (PropVar $ Eq (Var A) (Var B)) (PropVar $ Exists B (PropVar (Eq (Var B) (Var C)))) in applyFOLRule [GoLeft] (\prfAeqB -> applyFOLRule [GoRight,GoLeft] (ruleTransitivity prfAeqB) [] formula) [] formula
   putStrLn $ pr $ let formula = Proof $ And (PropVar $ Eq (Var A) (Var B)) (PropVar $ Exists B (PropVar (Eq (Var B) (Var C)))) in applyFOLRule [GoLeft] (\prfAeqB -> applyFOLRule [GoRight,GoLeft] (ruleTransitivity prfAeqB) [prfAeqB] formula) [] formula
+
+-- |- S0+S0=SS0
+thm = do
+  eq1 <- axiom3 (Var A) (Var B) >>= ruleSpec (S Z) >>= ruleSpec Z
+  eq2 <- axiom2 (Var A) >>= ruleSpec (S Z) >>= ruleAddS
+  ruleTransitivity eq1 eq2
 
 {- Prop1 -}
 -- |- 0=0+0
