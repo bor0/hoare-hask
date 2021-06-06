@@ -332,16 +332,16 @@ getBoundVars x = nub $ go x where
 We are now able to implement \textbf{Rule of Specification}:
 
 \begin{lstlisting}
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> ESP (FOL a)
-ruleSpec (Proof (PropVar (ForAll x y))) e | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
+ruleSpec :: Eq a => Arith a -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+ruleSpec e (Proof (PropVar (ForAll x y))) | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
 ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 \end{lstlisting}
 
 We can also implement \textbf{Rule of Generalization} as follows:
 
 \begin{lstlisting}
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
-ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` (concatMap (getFreeVars . fromProof) premises) -- fantasy vars
+ruleGeneralize :: Eq a => a -> [Proof (PropCalc (FOL a))] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+ruleGeneralize v premises (Proof f) | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 \end{lstlisting}
@@ -361,13 +361,13 @@ We're given the following:
 Now, \textbf{Rule of Existence} can be implemented as follows:
 
 \begin{lstlisting}
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> ESP (FOL a)
-ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
+ruleExistence :: Eq a => a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+ruleExistence v paths f | allSame (map (\path -> getTerm path $ fromProof f) paths) =
   go f paths >>= \prf -> Right $ Proof $ PropVar (Exists v (fromProof prf))
   where
   go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var v) f >>= \prf -> go prf paths
   go x _ = Right x
-ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
+ruleExistence v [] f | v `notElem` getBoundVars (fromProof f) =
   Right $ Proof $ PropVar (Exists v (fromProof f))
 ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 \end{lstlisting}
@@ -421,19 +421,19 @@ lemma1 = do
   -- |- All A:All B:(A+SB=S(A+B))
   step1 <- axiom3 (Var A) (Var B)
   -- |- All B:(D+SB=S(D+B))
-  step2 <- ruleSpec step1 (Var D)
+  step2 <- ruleSpec (Var D) step1
   -- |- D+SSC=S(D+SC)
-  step3 <- ruleSpec step2 (S (Var C))
+  step3 <- ruleSpec (S (Var C)) step2
   -- |- All B:(SD+SB=S(SD+B))
-  step4 <- ruleSpec step1 (S (Var D))
+  step4 <- ruleSpec (S (Var D)) step1
   -- |- SD+SC=S(SD+C)
-  step5 <- ruleSpec step4 (Var C)
+  step5 <- ruleSpec (Var C) step4
   -- |- S(SD+C)=SD+SC
   step6 <- ruleSymmetry step5
   -- |- All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)
   step7 <- ruleFantasy (PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))) $ \premise -> do
     -- |- D+SC=SD+C
-    step8 <- ruleSpec premise (Var D)
+    step8 <- ruleSpec (Var D) premise
     -- |- S(D+SC)=S(SD+C)
     step9 <- ruleAddS step8
     -- |- D+SSC=S(SD+C)
@@ -441,9 +441,9 @@ lemma1 = do
     -- |- D+SSC=SD+SC
     step11 <- ruleTransitivity step10 step6
     -- |- All D:(D+SSC=SD+SC)
-    ruleGeneralize step11 D [premise]
+    ruleGeneralize D [premise] step11
   -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
-  ruleGeneralize step7 C []
+  ruleGeneralize C [] step7
 \end{lstlisting}
 \end{minipage}
 \begin{minipage}[t]{0.45\textwidth}
@@ -454,27 +454,27 @@ lemma2 = do
   -- |- All A:All B:(A+SB=S(A+B))
   step1 <- axiom3 (Var A) (Var B)
   -- |- All B:(D+SB=S(D+B))
-  step2 <- ruleSpec step1 (Var D)
+  step2 <- ruleSpec (Var D) step1
   -- |- D+SSC=S(D+SC)
-  step3 <- ruleSpec step2 (S (Var C))
+  step3 <- ruleSpec (S (Var C)) step2
   -- |- D+S0=S(D+0)
-  step4 <- ruleSpec step2 Z
+  step4 <- ruleSpec Z step2
   -- |- All A:(A+0=A)
   step5 <- axiom2 (Var A)
   -- |- D+0=D
-  step6 <- ruleSpec step5 (Var D)
+  step6 <- ruleSpec (Var D) step5
   -- |- S(D+0)=SD
   step7 <- ruleAddS step6
   -- |- D+S0=SD
   step8 <- ruleTransitivity step4 step7
   -- |- SD+0=SD
-  step9 <- ruleSpec step5 (S (Var D))
+  step9 <- ruleSpec (S (Var D)) step5
   -- |- SD=SD+0
   step10 <- ruleSymmetry step9
   -- |- D+S0=SD+0
   step11 <- ruleTransitivity step8 step10
   -- lemma2 |- All D:(D+S0=SD+0)
-  ruleGeneralize step11 D []
+  ruleGeneralize D [] step11
 \end{lstlisting}
 
 $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:
@@ -920,7 +920,7 @@ Following the rule to construct a Hoare triple for this command, we can notice t
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
-> let prf1 = ruleFantasy (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= \ax1 -> ruleSpec ax1 (Var A)) <*> ruleSepR pq)
+> let prf1 = ruleFantasy (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= ruleSpec (Var A)) <*> ruleSepR pq)
 |- A=0 /\ 0=0 -> ~SA=0 /\ 0=0
 > let prf2 = ruleFantasy (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) return
 |- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0
@@ -1027,18 +1027,18 @@ pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (
     -- |- ~~Exists C:(A+C=B)
     step1 <- ruleDoubleTildeIntro step1
     -- |- ~~A+SC=B
-    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \prf -> ruleSpec prf (S (Var C))) step1 []
+    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= ruleSpec (S (Var C))) [] step1
     -- |- A+SC=B
     step3 <- ruleDoubleTildeElim step2
-    step4 <- theorem >>= \theorem -> ruleSpec theorem (Var C)
+    step4 <- theorem >>= ruleSpec (Var C)
     -- |- A+SC=SA+C
-    step4 <- ruleSpec step4 (Var A)
+    step4 <- ruleSpec (Var A) step4
     -- |- SA+C=A+SC
     step5 <- ruleSymmetry step4
     -- |- SA+C=B
     step6 <- ruleTransitivity step5 step3
     -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-    ruleExistence step6 C []
+    ruleExistence C [] step6
 \end{lstlisting}
 
 Finally, \texttt{step1} produces the triple:

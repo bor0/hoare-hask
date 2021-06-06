@@ -58,8 +58,8 @@ instance Pretty a => Pretty (FOL a) where
 -- | Apply FOL rule to a specific portion of a formula
 -- Might be useful for some rules that may require drilling, like `ruleInterchangeL`
 -- Restriction: Using `applyFOLRule` within `applyFOLRule` is not allowed on any variable which appeared bound in the context.
-applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> ESP (FOL a)) -> Proof (PropCalc (FOL a)) -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
-applyFOLRule xs f (Proof x) ctx = go xs f x [] ctx
+applyFOLRule :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> ESP (FOL a)) -> [Proof (PropCalc (FOL a))] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+applyFOLRule xs f ctx (Proof x) = go xs f x [] ctx
   where
   go :: Eq a => Path -> (Proof (PropCalc (FOL a)) -> ESP (FOL a)) -> PropCalc (FOL a) -> [a] -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
   go [] f x boundVars premises | not (any (`elem` boundVars) (concatMap (getFreeVars . fromProof) premises)) = f (Proof x)
@@ -88,7 +88,7 @@ applyArithRule _ _ (Var x) = Var x -- nothing to apply for a variable
 
 -- Combines applyFOLRule and applyArithRule
 applyFOLArithRule :: Eq a => Pos -> Path -> Path -> (Arith a -> Arith a) -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
-applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Right $ Proof $ go pos (fromProof x)) x []
+applyFOLArithRule pos path1 path2 f x = applyFOLRule path1 (\x -> Right $ Proof $ go pos (fromProof x)) [] x
   where
   go GoLeft (PropVar (Eq x y)) = PropVar (Eq (applyArithRule path2 f x) y)
   go GoRight (PropVar (Eq x y)) = PropVar (Eq x (applyArithRule path2 f y))
@@ -210,14 +210,14 @@ axiom5 _ _ = Left "axiom5: Cannot construct proof"
 
 -- | Rule of Specification
 -- Suppose u is a variable which occurs inside the string x. If the string ∀u:x is a theorem, then so is x, and so are any strings made from x by replacing u, wherever it occurs, by one and the same term. (Restriction: The term which replaces u must not contain any variable that is quantified in x.)
-ruleSpec :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> ESP (FOL a)
-ruleSpec (Proof (PropVar (ForAll x y))) e | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
+ruleSpec :: Eq a => Arith a -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+ruleSpec e (Proof (PropVar (ForAll x y))) | not (any (`elem` getArithVars e) (getBoundVars y)) = Right $ substPropCalc (Proof y) (Var x) e
 ruleSpec _ _ = Left "ruleSpec: Cannot construct proof"
 
 -- | Rule of Generalization
 -- Suppose x is a theorem in which u, a variable, occurs free. Then ∀u:x is a theorem. (Restriction: No generalization is allowed in a fantasy on any variable which appeared free in the fantasy's premise.)
-ruleGeneralize :: Eq a => Proof (PropCalc (FOL a)) -> a -> [Proof (PropCalc (FOL a))] -> ESP (FOL a)
-ruleGeneralize (Proof f) v premises | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
+ruleGeneralize :: Eq a => a -> [Proof (PropCalc (FOL a))] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+ruleGeneralize v premises (Proof f) | v `notElem` getBoundVars f && v `notElem` concatMap (getFreeVars . fromProof) premises -- fantasy vars
   = Right $ Proof $ PropVar (ForAll v f)
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 
@@ -235,13 +235,13 @@ ruleInterchangeR _ = Left "ruleInterchangeR: Cannot construct proof"
 
 -- | Rule of Existence
 -- Suppose a term (which may contain variables as long as they are free) appears once, or multiply, in a theorem. Then any (or several, or all) of the appearances of the term may be replaced by a variable which otherwise does not occur in the theorem, and the corresponding existential quantifier must be placed in front.
-ruleExistence :: Eq a => Proof (PropCalc (FOL a)) -> a -> [(Pos, Path, Path)] -> ESP (FOL a)
-ruleExistence f v paths | allSame (map (\path -> getTerm path $ fromProof f) paths) =
+ruleExistence :: Eq a => a -> [(Pos, Path, Path)] -> Proof (PropCalc (FOL a)) -> ESP (FOL a)
+ruleExistence v paths f | allSame (map (\path -> getTerm path $ fromProof f) paths) =
   go f paths >>= \prf -> Right $ Proof $ PropVar (Exists v (fromProof prf))
   where
   go f ((pos, path1, path2):paths) = applyFOLArithRule pos path1 path2 (\_ -> Var v) f >>= \prf -> go prf paths
   go x _ = Right x
-ruleExistence f v [] | v `notElem` getBoundVars (fromProof f) =
+ruleExistence v [] f | v `notElem` getBoundVars (fromProof f) =
   Right $ Proof $ PropVar (Exists v (fromProof f))
 ruleExistence _ _ _ = Left "ruleExistence: Cannot construct proof"
 

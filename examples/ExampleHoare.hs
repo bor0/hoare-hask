@@ -26,18 +26,18 @@ pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (
     -- |- ~~Exists C:(A+C=B)
     step1 <- ruleDoubleTildeIntro step1
     -- |- ~~A+SC=B
-    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= \prf -> ruleSpec prf (S (Var C))) step1 []
+    step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= ruleSpec (S (Var C))) [] step1
     -- |- A+SC=B
     step3 <- ruleDoubleTildeElim step2
-    step4 <- theorem >>= \theorem -> ruleSpec theorem (Var C)
+    step4 <- theorem >>= ruleSpec (Var C)
     -- |- A+SC=SA+C
-    step4 <- ruleSpec step4 (Var A)
+    step4 <- ruleSpec (Var A) step4
     -- |- SA+C=A+SC
     step5 <- ruleSymmetry step4
     -- |- SA+C=B
     step6 <- ruleTransitivity step5 step3
     -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-    ruleExistence step6 C []
+    ruleExistence C [] step6
 
 -- |- Exists C:(A+C=B) -> Exists C:(A+C=B)
 post = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) return
