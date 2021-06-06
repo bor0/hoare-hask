@@ -1041,7 +1041,7 @@ pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (
     ruleExistence C [] step6
 \end{lstlisting}
 
-Finally, \texttt{step1} produces the triple:
+Finally, \texttt{proof} produces the triple:
 $$\{\exists C: 0+C=B\} A \texttt{ := } 0 \texttt{; while } \neg(A = B) \texttt{ do }A\texttt{ := }S(A) \ \{\neg (\neg (A = B)) \land \exists C: A + C = B\}$$
 
 \section{Conclusion and future work}
