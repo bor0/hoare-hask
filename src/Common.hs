@@ -28,7 +28,7 @@ instance (Show a, Pretty b) => Pretty (Either a b) where
   prPrec x (Left a)  = (read (show a) :: String) ++ " ⍻"
 
 instance Pretty a => Pretty (Proof a) where
-  prPrec x (Proof a) = "|- " ++ prPrec x a
+  prPrec x (Proof a) = "⊢ " ++ prPrec x a
 
 #ifdef __HUGS__
 (<$>) :: Functor f => (a -> b) -> f a -> f b

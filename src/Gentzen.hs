@@ -18,13 +18,13 @@ type ESP a = Either String (Proof (PropCalc a))
 instance Pretty a => Pretty (PropCalc a) where
   prPrec x (PropVar a) = prPrec x a
   prPrec q (Not formula) = prParen (q > 3) ("<",">") $
-    "~" ++ prPrec 3 formula
+    "¬" ++ prPrec 3 formula
   prPrec q (And lhs rhs) = prParen (q > 2) ("<",">") $
-    prPrec 3 lhs ++ " /\\ " ++ prPrec 2 rhs
+    prPrec 3 lhs ++ "∧" ++ prPrec 2 rhs
   prPrec q (Or lhs rhs)  = prParen (q > 1) ("<",">") $
-    prPrec 2 lhs ++ " \\/ " ++ prPrec 1 rhs
+    prPrec 2 lhs ++ "∨" ++ prPrec 1 rhs
   prPrec q (Imp lhs rhs) = prParen (q > 0) ("<",">") $
-    prPrec 1 lhs ++ " -> " ++ prPrec 0 rhs
+    prPrec 1 lhs ++ "→" ++ prPrec 0 rhs
 
 {- Helper functions -}
 
@@ -63,12 +63,12 @@ ruleSepR (Proof (And x y)) = Right $ Proof y
 ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 
 -- | Double-Tilde Rule
--- The string ~~ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
+-- The string ¬¬ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
 ruleDoubleTildeIntro :: Proof (PropCalc a) -> ESP a
 ruleDoubleTildeIntro (Proof x) = Right $ Proof $ Not (Not x)
 
 -- | Double-Tilde Rule
--- The string ~~ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
+-- The string ¬¬ can be deleted from any theorem. It can also be inserted into any theorem, provided that the resulting string is itself well-formed
 ruleDoubleTildeElim :: Proof (PropCalc a) -> ESP a
 ruleDoubleTildeElim (Proof (Not (Not x))) = Right $ Proof x
 ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
@@ -88,21 +88,21 @@ ruleDetachment (Proof x) (Proof (Imp x' y)) | x == x' = Right $ Proof y
 ruleDetachment _ _ = Left "ruleDetachment: Cannot construct proof"
 
 -- | Contrapositive Rule
--- <x⊃y> and <~y⊃~x> are interchangeable.
+-- <x⊃y> and <¬y⊃¬x> are interchangeable.
 ruleContra :: Proof (PropCalc a) -> ESP a
 ruleContra (Proof (Imp (Not y) (Not x))) = Right $ Proof $ Imp x y
 ruleContra (Proof (Imp x y)) = Right $ Proof $ Imp (Not y) (Not x)
 ruleContra _ = Left "ruleContra: Cannot construct proof"
 
 -- | De Morgan's Rule
--- <~x∧~y> and ~<x∨y> are interchangeable.
+-- <¬x∧¬y> and ¬<x∨y> are interchangeable.
 ruleDeMorgan :: Proof (PropCalc a) -> ESP a
 ruleDeMorgan (Proof (And (Not x) (Not y))) = Right $ Proof $ Not (Or x y)
 ruleDeMorgan (Proof (Not (Or x y))) = Right $ Proof $ And (Not x) (Not y)
 ruleDeMorgan _ = Left "ruleDeMorgan: Cannot construct proof"
 
 -- | Switcheroo Rule
--- <x∨y> and <~x⊃y> are interchangeable.
+-- <x∨y> and <¬x⊃y> are interchangeable.
 ruleSwitcheroo :: Proof (PropCalc a) -> ESP a
 ruleSwitcheroo (Proof (Or x y)) = Right $ Proof $ Imp (Not x) y
 ruleSwitcheroo (Proof (Imp (Not x) y)) = Right $ Proof $ Or x y

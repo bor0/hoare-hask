@@ -50,8 +50,8 @@ instance Pretty a => Pretty (Arith a) where
 
 instance Pretty a => Pretty (FOL a) where
   prPrec q (Eq a b)     = prParen (q > 4) ("(",")") $ prPrec 5 a ++ "=" ++ prPrec 4 b
-  prPrec q (ForAll x y) = prParen (q > 8) ("(",")") $ "All " ++ prPrec 9 x ++ ":" ++ prPrec 8 y
-  prPrec q (Exists x y) = prParen (q > 9) ("(",")") $ "Exists " ++ prPrec 10 x ++ ":" ++ prPrec 9 y
+  prPrec q (ForAll x y) = prParen (q > 8) ("(",")") $ "∀" ++ prPrec 9 x ++ ":" ++ prPrec 8 y
+  prPrec q (Exists x y) = prParen (q > 9) ("(",")") $ "∃" ++ prPrec 10 x ++ ":" ++ prPrec 9 y
 
 {- Helper functions -}
 
@@ -222,13 +222,13 @@ ruleGeneralize x premises (Proof y) | x `notElem` getBoundVars y && x `notElem` 
 ruleGeneralize _ _ _ = Left "ruleGeneralize: Cannot construct proof"
 
 -- | Rule of Interchange
--- Suppose u is a variable. Then the strings ∀u:~ and ~∃u: are interchangeable anywhere inside any theorem.
+-- Suppose u is a variable. Then the strings ∀u:¬ and ¬∃u: are interchangeable anywhere inside any theorem.
 ruleInterchangeL :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleInterchangeL (Proof (PropVar (ForAll x (Not y)))) = Right $ Proof $ Not (PropVar $ Exists x y)
 ruleInterchangeL _ = Left "ruleInterchangeL: Cannot construct proof"
 
 -- | Rule of Interchange
--- Suppose u is a variable. Then the strings ∀u:~ and ~∃u: are interchangeable anywhere inside any theorem.
+-- Suppose u is a variable. Then the strings ∀u:¬ and ¬∃u: are interchangeable anywhere inside any theorem.
 ruleInterchangeR :: Proof (PropCalc (FOL a)) -> ESP (FOL a)
 ruleInterchangeR (Proof (Not (PropVar (Exists x y)))) = Right $ Proof $ PropVar (ForAll x (Not y))
 ruleInterchangeR _ = Left "ruleInterchangeR: Cannot construct proof"

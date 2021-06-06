@@ -27,8 +27,14 @@
   breakatwhitespace=true,
   frame=none,
   tabsize=3,
-  literate=%
-    {✓}{\checkmark}1%
+  literate={✓}{\checkmark}1
+           {⊢}{$\vdash$}1
+           {→}{$\to$}1
+           {∧}{$\land$}1
+           {∨}{$\lor$}1
+           {¬}{$\neg$}1
+           {∀}{$\forall$}1
+           {∃}{$\exists$}1
 }
 
 \title{Tutorial on implementing Hoare logic for imperative programs in Haskell}
@@ -167,7 +173,7 @@ Note how we accept a non-proven term within \texttt{ruleFantasy}, whereas in oth
 
 \begin{lstlisting}
 > putStrLn $ pr $ ruleFantasy (And (PropVar A) (PropVar B)) (\pq -> join $ ruleJoin <$> ruleSepR pq <*> ruleSepL pq)
-|- A /\ B -> B /\ A ✓
+⊢ A∧B→B∧A ✓
 \end{lstlisting}
 
 Here's another example implementation for \textbf{Double-Tilde Rule}:
@@ -212,7 +218,7 @@ Now we can use this to apply \textbf{Double-Tilde Rule} to $B$ within $A \land (
 
 \begin{lstlisting}
 > putStrLn $ pr $ ruleFantasy (And (PropVar A) (Or (PropVar A) (PropVar B))) (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro)
-|- A /\ <A \/ B> -> A /\ <A \/ ~~B> ✓
+⊢ A∧<A∨B>→A∧<A∨¬¬B> ✓
 \end{lstlisting}
 
 \section{Number theory}
@@ -421,31 +427,31 @@ $\begin{aligned}
 
 \begin{lstlisting}
 lemma1 = do
-  -- |- All A:All B:(A+SB=S(A+B))
+  -- ⊢ ∀A:∀B:(A+SB=S(A+B))
   step1 <- axiom3 (Var A) (Var B)
-  -- |- All B:(D+SB=S(D+B))
+  -- ⊢ ∀B:(D+SB=S(D+B))
   step2 <- ruleSpec (Var D) step1
-  -- |- D+SSC=S(D+SC)
+  -- ⊢ D+SSC=S(D+SC)
   step3 <- ruleSpec (S (Var C)) step2
-  -- |- All B:(SD+SB=S(SD+B))
+  -- ⊢ ∀B:(SD+SB=S(SD+B))
   step4 <- ruleSpec (S (Var D)) step1
-  -- |- SD+SC=S(SD+C)
+  -- ⊢ SD+SC=S(SD+C)
   step5 <- ruleSpec (Var C) step4
-  -- |- S(SD+C)=SD+SC
+  -- ⊢ S(SD+C)=SD+SC
   step6 <- ruleSymmetry step5
-  -- |- All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)
+  -- ⊢ ∀D:(D+SC=SD+C)→∀D:(D+SSC=SD+SC)
   step7 <- ruleFantasy (PropVar (ForAll D (PropVar (Eq (Plus (Var D) (S (Var C))) (Plus (S (Var D)) (Var C)))))) $ \premise -> do
-    -- |- D+SC=SD+C
+    -- ⊢ D+SC=SD+C
     step8 <- ruleSpec (Var D) premise
-    -- |- S(D+SC)=S(SD+C)
+    -- ⊢ S(D+SC)=S(SD+C)
     step9 <- ruleAddS step8
-    -- |- D+SSC=S(SD+C)
+    -- ⊢ D+SSC=S(SD+C)
     step10 <- ruleTransitivity step3 step9
-    -- |- D+SSC=SD+SC
+    -- ⊢ D+SSC=SD+SC
     step11 <- ruleTransitivity step10 step6
-    -- |- All D:(D+SSC=SD+SC)
+    -- ⊢ ∀D:(D+SSC=SD+SC)
     ruleGeneralize D [premise] step11
-  -- lemma1 |- All C:<All D:(D+SC=SD+C) -> All D:(D+SSC=SD+SC)>
+  -- lemma1 ⊢ ∀C:<∀D:(D+SC=SD+C)→∀D:(D+SSC=SD+SC)>
   ruleGeneralize C [] step7
 \end{lstlisting}
 \end{minipage}
@@ -454,36 +460,36 @@ $\star \ \forall D: D + S(Z) = S(D) + Z$:
 
 \begin{lstlisting}
 lemma2 = do
-  -- |- All A:All B:(A+SB=S(A+B))
+  -- ⊢ ∀A:∀B:(A+SB=S(A+B))
   step1 <- axiom3 (Var A) (Var B)
-  -- |- All B:(D+SB=S(D+B))
+  -- ⊢ ∀B:(D+SB=S(D+B))
   step2 <- ruleSpec (Var D) step1
-  -- |- D+SSC=S(D+SC)
+  -- ⊢ D+SSC=S(D+SC)
   step3 <- ruleSpec (S (Var C)) step2
-  -- |- D+S0=S(D+0)
+  -- ⊢ D+S0=S(D+0)
   step4 <- ruleSpec Z step2
-  -- |- All A:(A+0=A)
+  -- ⊢ ∀A:(A+0=A)
   step5 <- axiom2 (Var A)
-  -- |- D+0=D
+  -- ⊢ D+0=D
   step6 <- ruleSpec (Var D) step5
-  -- |- S(D+0)=SD
+  -- ⊢ S(D+0)=SD
   step7 <- ruleAddS step6
-  -- |- D+S0=SD
+  -- ⊢ D+S0=SD
   step8 <- ruleTransitivity step4 step7
-  -- |- SD+0=SD
+  -- ⊢ SD+0=SD
   step9 <- ruleSpec (S (Var D)) step5
-  -- |- SD=SD+0
+  -- ⊢ SD=SD+0
   step10 <- ruleSymmetry step9
-  -- |- D+S0=SD+0
+  -- ⊢ D+S0=SD+0
   step11 <- ruleTransitivity step8 step10
-  -- lemma2 |- All D:(D+S0=SD+0)
+  -- lemma2 ⊢ ∀D:(D+S0=SD+0)
   ruleGeneralize D [] step11
 \end{lstlisting}
 
 $\star \ \forall C: \forall D: D + S(C) = S(D) + C$:
 
 \begin{lstlisting}
--- |- All C:All D:(D+SC=SD+C)
+-- ⊢ ∀C:∀D:(D+SC=SD+C)
 theorem = join $ ruleInduction <$> lemma2 <*> lemma1
 \end{lstlisting}
 \end{minipage}
@@ -722,7 +728,7 @@ As an example, a program that counts from 0 to $B$ can be represented as follows
 \begin{minipage}{0.29\textwidth}
 \begin{lstlisting}
 A := 0
-while ~(A = B)
+while ¬(A = B)
   A := 1 + A
 \end{lstlisting}
 \end{minipage}
@@ -831,7 +837,7 @@ $Q$ exactly corresponds to \texttt{substPropCalc} - the implementation relies on
 
 \begin{lstlisting}
 > putStrLn $ pr $ hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
-{B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0 /\ 0=0} ✓
+{B+S0=SS0∧0=0} A := B+S0; {A=SS0∧0=0} ✓
 \end{lstlisting}
 
 \subsubsection{H-Consequence}
@@ -849,13 +855,13 @@ For example, considering the \texttt{hoareAssignment} example we saw earlier, we
 
 \begin{lstlisting}
 > let ht = hoareAssignment A (Plus (Var B) (S Z)) (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z)))
-{B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0 /\ 0=0} ✓
+{B+S0=SS0∧0=0} A := B+S0; {A=SS0∧0=0} ✓
 > let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) return
-|- B+S0=SS0 /\ 0=0 -> B+S0=SS0 /\ 0=0 ✓
+⊢ B+S0=SS0∧0=0→B+S0=SS0∧0=0 ✓
 > let post = ruleFantasy (And (PropVar (Eq (Var A) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
-|- A=SS0 /\ 0=0 -> A=SS0 ✓
+⊢ A=SS0∧0=0→A=SS0 ✓
 > putStrLn $ pr $ join $ hoareConsequence <$> pre <*> ht <*> post
-{B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0} ✓
+{B+S0=SS0∧0=0} A := B+S0; {A=SS0} ✓
 \end{lstlisting}
 
 For another example, we can strengthen the precondition:
@@ -864,11 +870,11 @@ For another example, we can strengthen the precondition:
 > let ht = hoareAssignment A (Plus (Var B) (S Z)) (PropVar (Eq (Var A) (S (S Z))))
 {B+S0=SS0} A := B+S0; {A=SS0} ✓
 > let pre = ruleFantasy (And (PropVar (Eq (Plus (Var B) (S Z)) (S (S Z)))) (PropVar (Eq Z Z))) ruleSepL
-|- B+S0=SS0 /\ 0=0 -> B+S0=SS0 ✓
+⊢ B+S0=SS0∧0=0→B+S0=SS0 ✓
 > let post = ruleFantasy (PropVar (Eq (Var A) (S (S Z)))) return
-|- A=SS0 -> A=SS0 ✓
+⊢ A=SS0→A=SS0 ✓
 > putStrLn $ pr $ join $ hoareConsequence <$> pre <*> ht <*> post
-{B+S0=SS0 /\ 0=0} A := B+S0; {A=SS0} ✓
+{B+S0=SS0∧0=0} A := B+S0; {A=SS0} ✓
 \end{lstlisting}
 
 \subsubsection{H-Sequence}
@@ -886,11 +892,11 @@ Several commands can be sequenced as follows:
 
 \begin{lstlisting}
 > let c1 = hoareAssignment B Z (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var A) (Var A)))
-{0=0 /\ A=A} B := 0; {B=0 /\ A=A} ✓
+{0=0∧A=A} B := 0; {B=0∧A=A} ✓
 > let c2 = hoareAssignment C (Var A) (And (PropVar $ Eq (Var B) Z) (PropVar $ Eq (Var C) (Var A)))
-{B=0 /\ A=A} C := A; {B=0 /\ C=A} ✓
+{B=0∧A=A} C := A; {B=0∧C=A} ✓
 > putStrLn $ pr $ join $ hoareSequence <$> c1 <*> c2
-{0=0 /\ A=A} B := 0; C := A; {B=0 /\ C=A} ✓
+{0=0∧A=A} B := 0; C := A; {B=0∧C=A} ✓
 \end{lstlisting}
 
 \subsubsection{H-Conditional}
@@ -908,34 +914,34 @@ For the purposes of example, we start by considering the command:
 
 \begin{lstlisting}
 > putStrLn $ pr $ CIfElse (Not (PropVar $ Eq (Var A) Z)) CSkip (CAssign A (Plus (Var A) (S Z)))
-(If (~A=0) Then (;) Else (A := A+S0;));
+(If (¬A=0) Then (;) Else (A := A+S0;));
 \end{lstlisting}
 
 Following the rule to construct a Hoare triple for this command, we can notice that the conditionals $B$ and $P$ are given in the code, so we have to construct the two triples $\{A \neq 0 \land P\} \texttt{ ; } \{Q\}$ and $\{\neg(A \neq 0) \land P\} A \texttt{ := } 1 + A; \{Q\}$.
 
 \begin{lstlisting}
 > let ht1 = hoareSkip (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
-{~A=0 /\ 0=0} ; {~A=0 /\ 0=0} ✓
+{¬A=0∧0=0} ; {¬A=0∧0=0} ✓
 > let ht2 = hoareAssignment A (S (Var A)) (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z))
-{~SA=0 /\ 0=0} A := SA; {~A=0 /\ 0=0} ✓
+{¬SA=0∧0=0} A := SA; {¬A=0∧0=0} ✓
 \end{lstlisting}
 
 The next thing to do is to transform the precondition of the second triple to match the first one.
 
 \begin{lstlisting}
 > let prf1 = ruleFantasy (And (PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) (\pq -> join $ ruleJoin <$> (axiom1 (Var A) >>= ruleSpec (Var A)) <*> ruleSepR pq)
-|- A=0 /\ 0=0 -> ~SA=0 /\ 0=0 ✓
+⊢ A=0∧0=0→¬SA=0∧0=0 ✓
 > let prf2 = ruleFantasy (And (Not $ PropVar (Eq (Var A) Z)) (PropVar $ Eq Z Z)) return
-|- ~A=0 /\ 0=0 -> ~A=0 /\ 0=0 ✓
+⊢ ¬A=0∧0=0→¬A=0∧0=0 ✓
 \end{lstlisting}
 
 Given these two proofs, we can now transform the triple easily, and conclude our proof:
 
 \begin{lstlisting}
 > let ht3 = join $ hoareConsequence <$> prf1 <*> ht2 <*> prf2
-{A=0 /\ 0=0} A := SA; {~A=0 /\ 0=0} ✓
+{A=0∧0=0} A := SA; {¬A=0∧0=0} ✓
 > putStrLn $ pr $ join $ hoareConditional <$> ht3 <*> ht1
-{0=0} (If (A=0) Then (A := SA;) Else (;)); {~A=0 /\ 0=0} ✓
+{0=0} (If (A=0) Then (A := SA;) Else (;)); {¬A=0∧0=0} ✓
 \end{lstlisting}
 
 \subsubsection{H-While}
@@ -964,18 +970,18 @@ Similarly, as we did in the example for the H-Conditional rule, following the ru
 > let ht1 = hoareSkip (PropVar $ Eq Z Z) :: ESHT Integer
 {0=0} ; {0=0} ✓
 > let pre = ruleFantasy (And (PropVar $ Eq Z Z) (PropVar $ Eq Z Z)) ruleSepR :: ESP (FOL Integer)
-|- 0=0 /\ 0=0 -> 0=0 ✓
+⊢ 0=0∧0=0→0=0 ✓
 > let post = ruleFantasy (PropVar $ Eq Z Z) return :: ESP (FOL Integer)
-|- 0=0 -> 0=0 ✓
+⊢ 0=0→0=0 ✓
 > let ht2 = join $ hoareConsequence <$> pre <*> ht1 <*> post
-{0=0 /\ 0=0} ; {0=0} ✓
+{0=0∧0=0} ; {0=0} ✓
 \end{lstlisting}
 
 Now we can deduce a triple which states that from an infinite loop, anything follows (contradiction); our implementation does not support proving total correctness (termination).
 
 \begin{lstlisting}
 > putStrLn $ pr $ ht2 >>= hoareWhile
-{0=0} (While (0=0) Do {;}); {~0=0 /\ 0=0} ✓
+{0=0} (While (0=0) Do {;}); {¬0=0∧0=0} ✓
 \end{lstlisting}
 
 \subsection{A complete proof example}
@@ -1010,7 +1016,7 @@ To start figuring out \texttt{step4}, we consider the following code:
 
 \begin{lstlisting}
 > let step5 = hoareAssignment A (S (Var A)) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))
-{Exists C:(SA+C=B)} A := SA; {Exists C:(A+C=B)} ✓
+{∃C:(SA+C=B)} A := SA; {∃C:(A+C=B)} ✓
 \end{lstlisting}
 
 The resulting triple is close but does not exactly match the hypothesis of \texttt{proof}'s hypothesis, more specifically the precondition. We apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
@@ -1026,17 +1032,17 @@ Here's the complete proof for the preconditional part, relying on the previously
 
 \begin{lstlisting}
 pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))) $ \premise -> do
-    -- |- SA+C=A+SC
+    -- ⊢ SA+C=A+SC
     eq1 <- theorem >>= ruleSpec (Var C) >>= ruleSpec (Var A) >>= ruleSymmetry
-    -- |- ~~Exists C:(A+C=B)
+    -- ⊢ ¬¬∃C:(A+C=B)
     step1 <- ruleSepR premise >>= ruleDoubleTildeIntro
-    -- |- ~~A+SC=B
+    -- ⊢ ¬¬A+SC=B
     step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= ruleSpec (S (Var C))) [] step1
-    -- |- A+SC=B
+    -- ⊢ A+SC=B
     eq2 <- ruleDoubleTildeElim step2
-    -- |- SA+C=B
+    -- ⊢ SA+C=B
     eq3 <- ruleTransitivity eq1 eq2
-    -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
+    -- ⊢ ¬A=B∧∃C:(A+C=B)→∃C:(SA+C)=B
     ruleExistence C [] eq3
 \end{lstlisting}
 
