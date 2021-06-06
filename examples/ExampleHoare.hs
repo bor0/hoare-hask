@@ -22,22 +22,18 @@ countToB =
 egEval = eval (M.fromList [(B, 3)]) countToB
 
 pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))) $ \premise -> do
-    step1 <- ruleSepR premise
+    -- |- SA+C=A+SC
+    eq1 <- theorem >>= ruleSpec (Var C) >>= ruleSpec (Var A) >>= ruleSymmetry
     -- |- ~~Exists C:(A+C=B)
-    step1 <- ruleDoubleTildeIntro step1
+    step1 <- ruleSepR premise >>= ruleDoubleTildeIntro
     -- |- ~~A+SC=B
     step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= ruleSpec (S (Var C))) [] step1
     -- |- A+SC=B
-    step3 <- ruleDoubleTildeElim step2
-    step4 <- theorem >>= ruleSpec (Var C)
-    -- |- A+SC=SA+C
-    step4 <- ruleSpec (Var A) step4
-    -- |- SA+C=A+SC
-    step5 <- ruleSymmetry step4
+    eq2 <- ruleDoubleTildeElim step2
     -- |- SA+C=B
-    step6 <- ruleTransitivity step5 step3
+    eq3 <- ruleTransitivity eq1 eq2
     -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-    ruleExistence C [] step6
+    ruleExistence C [] eq3
 
 -- |- Exists C:(A+C=B) -> Exists C:(A+C=B)
 post = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B)))) return

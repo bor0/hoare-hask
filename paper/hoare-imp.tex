@@ -981,7 +981,7 @@ We provide a proof for the program \texttt{countToB}, namely that $B$ will be eq
 
 \[
 \AxiomC{$\{\neg(A = B) \land \exists C: A + C = B\}A\texttt{ := }S(A) \ \{\exists C: A + C = B\}$}
-\RightLabel{(step1)}
+\RightLabel{(proof)}
 \UnaryInfC{$\{P\}\texttt{while } \neg(A = B) \texttt{ do }A\texttt{ := }S(A) \ \{\neg (\neg (A = B)) \land \exists C: A + C = B\}$}
 \DisplayProof
 \]
@@ -1010,7 +1010,7 @@ To start figuring out \texttt{step4}, we consider the following code:
 {Exists C:(SA+C=B)} A := SA; {Exists C:(A+C=B)}
 \end{lstlisting}
 
-The resulting triple is close but does not exactly match the hypothesis of step1's hypothesis, more specifically the precondition. We apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
+The resulting triple is close but does not exactly match the hypothesis of \texttt{proof}'s hypothesis, more specifically the precondition. We apply the H-Consequence rule, and to do that, we need to provide a proof for the statement:
 $$\neg (A = B) \land \exists C: A + C = B \to \exists C: S(A) + C = B$$
 
 \begin{lstlisting}
@@ -1019,26 +1019,22 @@ post  = ruleFantasy (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var
 step4 = join $ hoareConsequence <$> pre <*> step5 <*> post
 \end{lstlisting}
 
-Here's the complete proof for the preconditional part:
+Here's the complete proof for the preconditional part, relying on the previously derived \texttt{theorem}:
 
 \begin{lstlisting}
 pre = ruleFantasy (And (Not (PropVar $ Eq (Var A) (Var B))) (PropVar (Exists C (PropVar $ Eq (Plus (Var A) (Var C)) (Var B))))) $ \premise -> do
-    step1 <- ruleSepR premise
+    -- |- SA+C=A+SC
+    eq1 <- theorem >>= ruleSpec (Var C) >>= ruleSpec (Var A) >>= ruleSymmetry
     -- |- ~~Exists C:(A+C=B)
-    step1 <- ruleDoubleTildeIntro step1
+    step1 <- ruleSepR premise >>= ruleDoubleTildeIntro
     -- |- ~~A+SC=B
     step2 <- applyFOLRule [GoLeft] (\x -> ruleInterchangeR x >>= ruleSpec (S (Var C))) [] step1
     -- |- A+SC=B
-    step3 <- ruleDoubleTildeElim step2
-    step4 <- theorem >>= ruleSpec (Var C)
-    -- |- A+SC=SA+C
-    step4 <- ruleSpec (Var A) step4
-    -- |- SA+C=A+SC
-    step5 <- ruleSymmetry step4
+    eq2 <- ruleDoubleTildeElim step2
     -- |- SA+C=B
-    step6 <- ruleTransitivity step5 step3
+    eq3 <- ruleTransitivity eq1 eq2
     -- |- ~A=B /\ Exists C:(A+C=B) -> Exists C:(SA+C)=B
-    ruleExistence C [] step6
+    ruleExistence C [] eq3
 \end{lstlisting}
 
 Finally, \texttt{proof} produces the triple:
