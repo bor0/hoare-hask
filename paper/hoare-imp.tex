@@ -221,6 +221,8 @@ Now we can use this to apply \textbf{Double-Tilde Rule} to $B$ within $A \land (
 ⊢ A∧<A∨B>→A∧<A∨¬¬B> ✓
 \end{lstlisting}
 
+Restriction: \texttt{applyPropRule} should not be used with any of the elimination rules (\texttt{ruleSepL}/\texttt{ruleSepR}) within the hypothesis of an implication, since we may end up with incorrect formulas such as $A \to A \land B$.
+
 \section{Number theory}
 
 In this section we provide an implementation of a number-theoretical system, using the same literature (GEB).
