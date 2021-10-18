@@ -25,6 +25,17 @@ bottom x = And x (Not x)
 -- ⊢ x∨¬x
 exclMiddle x = ruleFantasy (Not x) Right >>= ruleSwitcheroo
 
+-- ⊢ A∧<B∨C>→A∧<B∨¬¬C> without `applyPropRule`
+eg = ruleFantasy (And (PropVar A) (Or (PropVar B) (PropVar C))) $ \premise -> do
+  step1 <- s3lemma2' (PropVar B) (PropVar C)
+  prfA <- ruleSepL premise
+  prfBorC <- ruleSepR premise
+  step2 <- ruleDetachment prfBorC step1
+  step3 <- ruleSwitcheroo step2
+  step4 <- ruleContra step3
+  step5 <- ruleSwitcheroo step4
+  ruleJoin prfA step5
+
 -- Example proofs for exercises taken from http://incredible.pm/
 
 -- | Session 1
@@ -180,6 +191,14 @@ s3lemma2 x y = ruleFantasy (Or x y) $ \premise -> do
   step2 <- ruleContra step1
   step3 <- ruleSwitcheroo step2
   applyPropRule [GoRight] ruleDoubleTildeElim step3
+-- Also possible without `applyPropRule`, though if `y` is in the form of `(Not <..>)` the proof fails
+s3lemma2' x y = ruleFantasy (Or x y) $ \premise -> do
+  step1 <- ruleSwitcheroo premise
+  step2 <- ruleContra step1
+  step3 <- ruleFantasy (Not y) $ \premise2 -> do
+    step4 <- ruleDetachment premise2 step2
+    ruleDoubleTildeElim step4
+  ruleSwitcheroo step3
 -- ⊢ <a→c>∧<b→c>→a∨b→c
 s3lemma3 a b c = ruleFantasy (And (Imp a c) (Imp b c)) $ \premise -> do
   ruleFantasy (Or a b) $ \prfAorB -> do
@@ -251,10 +270,12 @@ s3prf1 = ruleFantasy (And (PropVar (Var A)) (PropVar (Var B))) $ \prfAB -> do
 -- ⊢ A→A∨B
 s3prf2 = s3lemma1 (PropVar $ Var A) (PropVar $ Var B)
 -- ⊢ B→A∨B
-s3prf3 = do
+s3prf3 = ruleFantasy (PropVar $ Var B) $ \prfB -> do
   lemma1 <- s3lemma1 (PropVar $ Var B) (PropVar $ Var A)
   lemma2 <- s3lemma2 (PropVar $ Var B) (PropVar $ Var A)
-  applyPropRule [GoRight] (\prf -> ruleDetachment prf lemma2) lemma1
+  step1 <- ruleDetachment prfB lemma1
+  ruleDetachment step1 lemma2
+--  applyPropRule [GoRight] (\prf -> ruleDetachment prf lemma2) lemma1
 -- ⊢ A→A∨A
 s3prf4 = s3lemma1 (PropVar $ Var A) (PropVar $ Var A)
 -- ⊢ A∨B→B∨A
