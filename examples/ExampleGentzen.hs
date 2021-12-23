@@ -20,7 +20,7 @@ main = do
   mapM_ (putStrLn . pr) [hprf1,hprf2,hprf2,hprf3,hprf3,hprf4,hprf5,hprf6,hprf7,hprf7,hprf8,hprf9]
 
 -- Helpers
--- ⊢ x∧¬x
+-- x∧¬x
 bottom x = And x (Not x)
 -- ⊢ x∨¬x
 exclMiddle x = ruleFantasy (Not x) Right >>= ruleSwitcheroo
