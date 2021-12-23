@@ -56,7 +56,7 @@ Using the programming language Haskell, we introduce an implementation of propos
 
 \section{Introduction}
 
-Nowadays, imperative programming languages run the world, to list a few popular ones: C, Python, JavaScript, PHP. Code is usually written in these languages by using an imperative style; that is, the computer is being told ("commanded") what to do and how to do it specifically. (The mathematical language is very unlike this, it is more declarative rather than imperative, that is, it doesn't care about the how.)
+Imperative programming languages run the world, to list a few popular ones: C, Python, JavaScript, PHP. Code is usually written in these languages by using an imperative style; that is, the computer is being told ("commanded") what to do and how to do it specifically. (The mathematical language is very unlike this, it is more declarative rather than imperative, that is, it doesn't care about the how.)
 
 Since a programmer has to specify the exact "how", it is easy to make a programming error. In addition, given the popularity of these programming languages, there are many bugs in software applications that are programmed in them. This motivates for a way to formally verify certain properties about programs written in these languages. Hoare logic is one way to mechanically reason about computer programs.
 
@@ -86,24 +86,14 @@ brelop ::= "&&" | "||" | "->"
 \end{minipage}
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
-data PropCalc =
-  A | B | C
-  | Not PropCalc
-  | And PropCalc PropCalc
-  | Or PropCalc PropCalc
-  | Imp PropCalc PropCalc
+data PropCalc = A | B | C | Not PropCalc | And PropCalc PropCalc | Or PropCalc PropCalc | Imp PropCalc PropCalc
 \end{lstlisting}
 \end{minipage}
 
 We will use the following, more generic implementation - instead of using specific variables, we rely on polymorphic types. This allows for an easy embedding of the system in other systems.
 
 \begin{lstlisting}
-data PropCalc a =
-  PropVar a
-  | Not (PropCalc a)
-  | And (PropCalc a) (PropCalc a)
-  | Or (PropCalc a) (PropCalc a)
-  | Imp (PropCalc a) (PropCalc a)
+data PropCalc a = PropVar a | Not (PropCalc a) | And (PropCalc a) (PropCalc a) | Or (PropCalc a) (PropCalc a) | Imp (PropCalc a) (PropCalc a)
 \end{lstlisting}
 
 We now have a way to represent some logical formulas, e.g. $A \land B$ as \texttt{And (PropVar A) (PropVar B)}.
@@ -146,15 +136,22 @@ Here's how we can implement \textbf{Joining Rule} and \textbf{Sep Rule}:
 \begin{lstlisting}
 ruleJoin :: Proof (PropCalc a) -> Proof (PropCalc a) -> ESP a
 ruleJoin (Proof x) (Proof y) = Right $ Proof $ And x y
+\end{lstlisting}
 
+\begin{minipage}[t]{0.51\textwidth}
+\begin{lstlisting}
 ruleSepL :: Proof (PropCalc a) -> ESP a
 ruleSepL (Proof (And x y)) = Right $ Proof x
 ruleSepL _ = Left "ruleSepL: Cannot construct proof"
-
+\end{lstlisting}
+\end{minipage}
+\begin{minipage}[t]{0.49\textwidth}
+\begin{lstlisting}
 ruleSepR :: Proof (PropCalc a) -> ESP a
 ruleSepR (Proof (And x y)) = Right $ Proof y
 ruleSepR _ = Left "ruleSepL: Cannot construct proof"
 \end{lstlisting}
+\end{minipage}
 
 That is, we just lift the values from the object level to Haskell's level, and Haskell's neat type system takes care of everything else. Even though \texttt{ruleJoin} cannot fail (always returns a proof), it's still a good practice to return \texttt{ESP} for easy composition between rules.
 
@@ -192,7 +189,7 @@ ruleDoubleTildeElim _ = Left "ruleDoubleTildeElim: Cannot construct proof"
 \end{lstlisting}
 \end{minipage}
 
-However, in the current implementation, we can't apply a rule to e.g. $B$ within $A \land (A \lor B)$, because it only accepts a full formula and doesn't know how to do replacements in its subformulas. To address this, we create a function that accepts a "path" (which subformula to apply it to), what rule should be applied, and the formula itself.
+However, in the current implementation, we can't apply a rule to e.g. $B$ within $A \lor B$, because it only accepts a full formula and doesn't know how to do replacements in its subformulas. To address this, we create a function that accepts a "path" (which subformula to apply it to), what rule should be applied, and the formula itself.
 
 \begin{lstlisting}
 data Pos = GoLeft | GoRight
@@ -214,11 +211,11 @@ applyPropRule xs f (Proof x) = go xs f x
 
 Of course, going left or right doesn't make much sense for unary operators, so the implementation will just drill down in the \texttt{Not} operator if it finds either a left or a right. But, going left or right does make sense for binary operators - we drill on the left and the right argument respectively.
 
-Now we can use this to apply \textbf{Double-Tilde Rule} to $B$ within $A \land (A \lor B)$ as follows:
+Now we can use this to apply \textbf{Double-Tilde Rule} to $B$ within $A \lor B$ as follows:
 
 \begin{lstlisting}
-> putStrLn $ pr $ ruleFantasy (And (PropVar A) (Or (PropVar A) (PropVar B))) (applyPropRule [GoRight, GoRight] ruleDoubleTildeIntro)
-⊢ A∧<A∨B>→A∧<A∨¬¬B> ✓
+> putStrLn $ pr $ ruleFantasy (Or (PropVar A) (PropVar B)) (applyPropRule [GoRight] ruleDoubleTildeIntro)
+⊢ A∨B→A∨¬¬B ✓
 \end{lstlisting}
 
 However, consider the following:
@@ -229,6 +226,22 @@ However, consider the following:
 \end{lstlisting}
 
 This utility function should be used with care, since we may end up with incorrect formulas. It is possible to derive the same formulas without using it at all, however in some cases using it adds convenience, at a price.
+
+\begin{lstlisting}
+> :{
+| putStrLn $ pr $ ruleFantasy (Or (PropVar A) (PropVar B)) $ \premise -> do
+|   step1 <- ruleSwitcheroo premise
+|   step2 <- ruleContra step1
+|   step3 <- ruleFantasy (Not (PropVar B)) $ \premise2 -> do
+|     step4 <- ruleDetachment premise2 step2
+|     ruleDoubleTildeElim step4
+|   prfBorA <- ruleSwitcheroo step3
+|   step5 <- ruleSwitcheroo prfBorA
+|   step6 <- ruleContra step5
+|   ruleSwitcheroo step6
+| :}
+⊢ A∨B→A∨¬¬B ✓
+\end{lstlisting}
 
 \section{Number theory}
 
@@ -287,9 +300,7 @@ data FOL a =
 \end{lstlisting}
 \end{minipage}
 
-Note how we embedded \texttt{PropCalc} within the system.
-
-Similarly, as before, these constructors must not be used directly; proofs should only be constructed given the rules, which we provide next.
+Note how we embed \texttt{PropCalc} within the system. Similarly, as before, these constructors must not be used directly; proofs should only be constructed given the rules, which we provide next.
 
 \subsection{Rules}
 
@@ -307,7 +318,7 @@ Again, these formation rules come from GEB, and we list them here for posterity:
 \item \textbf{Rule of Induction}: Let $X[u]$ represent a well-formed formula in which the variable $u$ is free, and $X[x/u]$ represents the same string, with each appearance of $u$ replaced by $x$. If both $\forall u:X[u] \to X[Su/u]$ and $X[0/u]$ are theorems, then $\forall u:X[u]$ is also a theorem.
 \end{itemize}
 
-To start, we provide an implementation of \texttt{substPropCalc}, which replaces all occurences of a term with another term in a formula:
+We provide an implementation of a function which replaces all occurences of a term with another term in a formula:
 
 \begin{lstlisting}
 substPropCalc :: Eq a => Proof (PropCalc (FOL a)) -> Arith a -> Arith a -> Proof (PropCalc (FOL a))
@@ -322,9 +333,7 @@ substPropCalc (Proof f) v e = Proof $ go f v e where
   go (Imp x y) v e              = Imp (go x v e) (go y v e)
 \end{lstlisting}
 
-The function \texttt{substArith} is similar to \texttt{substPropCalc}, defined for its own data type.
-
-Next, we provide the functions \texttt{getArithVars} and \texttt{getBoundVars} that retrieve all variables in an arithmetic expression and all bound variables in a formula respectively.
+The function \texttt{substArith} is similar to \texttt{substPropCalc}, defined for its own data type. Next, we provide the functions \texttt{getArithVars} and \texttt{getBoundVars} that retrieve all variables in an arithmetic expression and all bound variables in a formula respectively.
 
 \begin{minipage}{0.49\textwidth}
 \begin{lstlisting}
@@ -612,10 +621,10 @@ beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Either String Bool
 beval ctx (PropVar (Eq x y))     = aeval ctx x >>= \x -> aeval ctx y >>= \y -> Right $ x == y
 beval ctx (PropVar (ForAll x y)) = beval ctx y
 beval ctx (PropVar (Exists x y)) = beval ctx y
-beval ctx (Not b1)               = beval ctx b1 >>= \b1 -> Right $ not b1
-beval ctx (And b1 b2)            = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 && b2
-beval ctx (Or b1 b2)             = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 || b2
-beval ctx (Imp b1 b2)            = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ not b1 || b2
+beval ctx (Not b1)    = beval ctx b1 >>= \b1 -> Right $ not b1
+beval ctx (And b1 b2) = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 && b2
+beval ctx (Or b1 b2)  = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 || b2
+beval ctx (Imp b1 b2) = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ not b1 || b2
 \end{lstlisting}
 
 Note that we ignore quantifiers in this implementation because we only rely on propositional logic and substitute variables based on the context.
@@ -637,11 +646,8 @@ We proceed with providing the syntax, evaluation rules, and their implementation
 
 \begin{lstlisting}
 data Command a =
-  CSkip
-  | CAssign a (Arith a)
-  | CSequence (Command a) (Command a)
-  | CIfElse (PropCalc (FOL a)) (Command a) (Command a)
-  | CWhile (PropCalc (FOL a)) (Command a)
+  CSkip | CAssign a (Arith a) | CSequence (Command a) (Command a)
+  | CIfElse (PropCalc (FOL a)) (Command a) (Command a) | CWhile (PropCalc (FOL a)) (Command a)
   | CAssert (PropCalc (FOL a)) (Command a) (PropCalc (FOL a))
 \end{lstlisting}
 
@@ -750,6 +756,8 @@ countToB =
   in CSequence l1 l2
 \end{lstlisting}
 \end{minipage}
+
+\pagebreak
 
 Here's an example evaluation with assertion checks:
 
@@ -965,6 +973,8 @@ hoareWhile _ = Left "hoareWhile: Cannot construct proof"
 \end{lstlisting}
 
 The implementation for constructing the rule is straightforward, but the tricky part is that we have to properly construct the precondition and the postcondition so that they match the rule.
+
+\pagebreak
 
 Again, for the purposes of example, consider the following command:
 
