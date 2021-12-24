@@ -28,18 +28,18 @@ type Context a = M.Map a Integer
 aeval :: (Ord a, Eq a) => Context a -> Arith a -> Either String Integer
 aeval ctx (Var v)        = if M.member v ctx then Right (ctx M.! v) else Left "Element not found"
 aeval ctx Z              = Right 0
-aeval ctx (S x)          = aeval ctx x >>= \x -> Right $ x + 1
+aeval ctx (S a)          = aeval ctx a >>= \a -> Right $ 1 + a
 aeval ctx (Plus a1 a2)   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 + a2
 aeval ctx (Mult a1 a2)   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 * a2
 
 beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Either String Bool
-beval ctx (PropVar (Eq x y))     = aeval ctx x >>= \x -> aeval ctx y >>= \y -> Right $ x == y
-beval ctx (PropVar (ForAll x y)) = beval ctx y
-beval ctx (PropVar (Exists x y)) = beval ctx y
-beval ctx (Not b1)               = beval ctx b1 >>= \b1 -> Right $ not b1
-beval ctx (And b1 b2)            = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 && b2
-beval ctx (Or b1 b2)             = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 || b2
-beval ctx (Imp b1 b2)            = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ not b1 || b2
+beval ctx (PropVar (Eq a1 a2))   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 == a2
+beval ctx (PropVar (ForAll x b)) = beval ctx b
+beval ctx (PropVar (Exists x b)) = beval ctx b
+beval ctx (Not b)     = beval ctx b >>= \b -> Right $ not b
+beval ctx (And b1 b2) = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 && b2
+beval ctx (Or b1 b2)  = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 || b2
+beval ctx (Imp b1 b2) = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ not b1 || b2
 
 eval :: (Ord a, Eq a) => Context a -> Command a -> Either String (Context a)
 eval ctx CSkip             = Right ctx

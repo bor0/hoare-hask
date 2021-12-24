@@ -111,7 +111,7 @@ Note that \texttt{Proof \$ And (PropVar A) (PropVar B)} is different from \textt
 
 \subsection{Rules}
 
-These rules come from GEB, and we list them here for posterity:
+These rules come from GEB, and we list them here for completeness:
 
 \begin{itemize}
 \item \textbf{Fantasy Rule (Implication-introduction)}: If $x$ were a theorem, $y$ would be a theorem ($<x \to y>$).
@@ -304,7 +304,7 @@ Note how we embed \texttt{PropCalc} within the system. Similarly, as before, the
 
 \subsection{Rules}
 
-Again, these formation rules come from GEB, and we list them here for posterity:
+These formation rules come from GEB as well:
 
 \begin{itemize}
 \item \textbf{Rule of Specification}: Suppose $u$ is a variable that occurs inside the string $x$. If the string $\forall u:x$ is a theorem, then so is $x$, and so are any strings made from $x$ by replacing $u$, wherever it occurs, by the same term. (Restriction: The term that replaces $u$ must not contain any variable quantified in $x$.)
@@ -569,7 +569,7 @@ The arrow symbol $\underset{ctx}{\to}$ in the rules represents the actual evalua
 aeval :: (Ord a, Eq a) => Context a -> Arith a -> Either String Integer
 aeval ctx (Var v)        = if M.member v ctx then Right (ctx M.! v) else Left "Element not found"
 aeval ctx Z              = Right 0
-aeval ctx (S x)          = aeval ctx x >>= \x -> Right $ x + 1
+aeval ctx (S a)          = aeval ctx a >>= \a -> Right $ 1 + a
 aeval ctx (Plus a1 a2)   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 + a2
 aeval ctx (Mult a1 a2)   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 * a2
 \end{lstlisting}
@@ -618,10 +618,10 @@ Similarly, the double right arrow symbol $\underset{ctx}{\Rightarrow}$ in the ru
 
 \begin{lstlisting}
 beval :: (Ord a, Eq a) => Context a -> PropCalc (FOL a) -> Either String Bool
-beval ctx (PropVar (Eq x y))     = aeval ctx x >>= \x -> aeval ctx y >>= \y -> Right $ x == y
-beval ctx (PropVar (ForAll x y)) = beval ctx y
-beval ctx (PropVar (Exists x y)) = beval ctx y
-beval ctx (Not b1)    = beval ctx b1 >>= \b1 -> Right $ not b1
+beval ctx (PropVar (Eq a1 a2))   = aeval ctx a1 >>= \a1 -> aeval ctx a2 >>= \a2 -> Right $ a1 == a2
+beval ctx (PropVar (ForAll x b)) = beval ctx b
+beval ctx (PropVar (Exists x b)) = beval ctx b
+beval ctx (Not b)     = beval ctx b >>= \b -> Right $ not b
 beval ctx (And b1 b2) = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 && b2
 beval ctx (Or b1 b2)  = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ b1 || b2
 beval ctx (Imp b1 b2) = beval ctx b1 >>= \b1 -> beval ctx b2 >>= \b2 -> Right $ not b1 || b2
