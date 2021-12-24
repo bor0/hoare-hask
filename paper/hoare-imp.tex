@@ -64,9 +64,9 @@ We will first provide an implementation of systems for manipulating logic and nu
 
 Hoare logic that we implement already has an implementation in Coq\cite{b3}. However, implementing a logic in Haskell is more concerned about playing at the value level (and to some extent at the type level), whereas in a dependently typed language the focus is at the type level. More specifically, in Haskell we cannot use any of the meta language's constructs to do mathematical proofs, so we have to take care of these algorithms ourselves.
 
-Haskell is not a strongly normalizing language, which means that not every evaluation necessarily terminates. However, in dependently typed languages, such as Coq\cite{b4}, the evaluation of proof terms (e.g. the type checker) is strongly normalizing, and this is what allows us to express mathematical proofs.
+Haskell is not a strongly normalizing language, which means that not every evaluation necessarily terminates. However, in dependently typed languages, such as Coq, the evaluation of proof terms (e.g. the type checker) is strongly normalizing, and this is what allows us to express mathematical proofs.
 
-There are good introductory books on dependent types\cite{b3}. In some books, there is a gentler approach that might be handy for newcomers\cite{b5}. There are good introductions to Haskell as well\cite{b6}.
+There are good introductory writings on dependent types\cite{b3}; there is a gentler approach that might be handy for newcomers\cite{b4}. There are good introductions to Haskell\cite{b5}, as well as mathematical logic\cite{b6}.
 
 \section{Propositional calculus}
 
@@ -531,7 +531,7 @@ type Context a = M.Map a Integer
 
 However, as with previous implementations, we keep things more generic and use the implementation on the right.
 
-We list the evaluation rules for arithmetic expressions:
+We list the evaluation rules for arithmetic expressions using natural deduction style; the expression above the line represents hypothesis, and the expression below represents conclusion:
 
 \[
 \AxiomC{$(\#v, \$v') \in ctx$}
@@ -1098,19 +1098,19 @@ Benjamin C. Pierce, Arthur Azevedo de Amorim, Chris Casinghino, Marco Gaboardi, 
 \newblock Electronic textbook, 2020.
 
 \bibitem{b4}
-Bruno Barras, Samuel Boutin, Cristina Cornes, Judicaël Courant, Jean-Christophe Filliâtre, et al.
-\newblock {\em The Coq Proof Assistant Reference Manual: Version 6.1}
-\newblock [Research Report] RT-0203, INRIA, 1997.
-
-\bibitem{b5}
 Boro Sitnikovski
 \newblock {\em Gentle Introduction to Dependent Types with Idris}
 \newblock Leanpub/Amazon KDP, 2018.
 
-\bibitem{b6}
+\bibitem{b5}
 Miran Lipovaca
 \newblock {\em Learn You a Haskell For Great Good}
 \newblock No Starch Press, 2011.
+
+\bibitem{b6}
+Daniel J. Velleman
+\newblock {\em How to prove it: A structured approach}
+\newblock Cambridge University Press, 2019.
 
 \bibitem{b7}
 Douglas Hofstadter
