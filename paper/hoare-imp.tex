@@ -931,7 +931,7 @@ For the purposes of example, we start by considering the command:
 
 \begin{lstlisting}
 > putStrLn $ pr $ CIfElse (Not (PropVar $ Eq (Var A) Z)) CSkip (CAssign A (Plus (Var A) (S Z)))
-(If (¬A=0) Then (;) Else (A := A+S0;));
+if (¬A=0) then {;} else {A := A+S0;};
 \end{lstlisting}
 
 Following the rule to construct a Hoare triple for this command, we can notice that the conditionals $B$ and $P$ are given in the code, so we have to construct the two triples $\{A \neq 0 \land P\} \texttt{ ; } \{Q\}$ and $\{\neg(A \neq 0) \land P\} A \texttt{ := } 1 + A; \{Q\}$.
@@ -958,7 +958,7 @@ Given these two proofs, we can now transform the triple easily, and conclude our
 > let ht3 = join $ hoareConsequence <$> prf1 <*> ht2 <*> prf2
 {A=0∧0=0} A := SA; {¬A=0∧0=0} ✓
 > putStrLn $ pr $ join $ hoareConditional <$> ht3 <*> ht1
-{0=0} (If (A=0) Then (A := SA;) Else (;)); {¬A=0∧0=0} ✓
+{0=0} if (A=0) then {A := SA;} else {;}; {¬A=0∧0=0} ✓
 \end{lstlisting}
 
 \subsubsection{H-While}
@@ -980,7 +980,7 @@ Again, for the purposes of example, consider the following command:
 
 \begin{lstlisting}
 > putStrLn $ pr (CWhile (PropVar $ Eq Z Z) CSkip :: Command Integer)
-(While (0=0) Do {;});
+while (0=0) do {;};
 \end{lstlisting}
 
 Similarly, as we did in the example for the H-Conditional rule, following the rule to construct a Hoare triple for this command, we get that $B$ is \texttt{(PropVar \$ Eq Z Z)} and $C$ is \texttt{CSkip}.
@@ -1000,7 +1000,7 @@ Now we can deduce a triple which states that from an infinite loop, anything fol
 
 \begin{lstlisting}
 > putStrLn $ pr $ ht2 >>= hoareWhile
-{0=0} (While (0=0) Do {;}); {¬0=0∧0=0} ✓
+{0=0} while (0=0) do {;}; {¬0=0∧0=0} ✓
 \end{lstlisting}
 
 \subsection{A complete proof example}

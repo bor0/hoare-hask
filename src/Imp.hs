@@ -19,9 +19,9 @@ instance Pretty a => Pretty (Command a) where
   prPrec q CSkip           = ";"
   prPrec q (CAssign x y)   = prPrec q x ++ " := " ++ prPrec q y ++ ";"
   prPrec q (CSequence x y) = prPrec q x ++ " " ++ prPrec q y
-  prPrec q (CIfElse x y z) = "(If (" ++ prPrec q x ++ ") Then (" ++ prPrec q y ++ ") Else (" ++ prPrec q z ++ "));"
-  prPrec q (CWhile x y)    = "(While (" ++ prPrec q x ++ ") Do {" ++ prPrec q y ++ "});"
-  prPrec q (CAssert x y z) = "(Assert {" ++ prPrec q x ++ "} (" ++ prPrec q y ++ ") {" ++ prPrec q z ++ "});"
+  prPrec q (CIfElse x y z) = "if (" ++ prPrec q x ++ ") then {" ++ prPrec q y ++ "} else {" ++ prPrec q z ++ "};"
+  prPrec q (CWhile x y)    = "while (" ++ prPrec q x ++ ") do {" ++ prPrec q y ++ "};"
+  prPrec q (CAssert x y z) = "assert {" ++ prPrec q x ++ "} (" ++ prPrec q y ++ ") {" ++ prPrec q z ++ "};"
 
 type Context a = M.Map a Integer
 
