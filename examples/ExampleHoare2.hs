@@ -1,6 +1,5 @@
 module ExampleHoare2 where
 
-import Common
 import Control.Monad (join)
 import ExampleCommon
 import Gentzen

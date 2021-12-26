@@ -1,11 +1,10 @@
 module ExampleTNT where
 
-import Common
+import Control.Monad (join)
 import ExampleCommon
 import Gentzen
 import PrettyPrinter
 import TNT
-import Control.Monad (join)
 
 lemma1 = do
   -- ⊢ ∀A:∀B:(A+SB=S(A+B))
