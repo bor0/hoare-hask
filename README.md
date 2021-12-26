@@ -1,6 +1,6 @@
 # Tutorial on implementing Hoare logic for imperative programs in Haskell
 
-This is the source code repository for my paper `Tutorial on implementing Hoare logic for imperative programs in Haskell`. In it you will find:
+This is the source code repository for my paper `Tutorial on implementing Hoare logic for imperative programs in Haskell`. In the `src` folder you will find:
 
 - `Common.hs`, `PrettyPrinter.hs` - Various utility functions
 - `Gentzen.hs` - Implementation of Propositional calculus
@@ -8,7 +8,7 @@ This is the source code repository for my paper `Tutorial on implementing Hoare 
 - `Hoare.hs` - Implementation of Hoare logic (on top of Propositional calculus + Number theory)
 - `Imp.hs` - Implementation of a simple imperative programming language (the commands correspond to the rules of Hoare logic)
 
-The paper can be downloaded from https://arxiv.org/abs/2101.11320.
+The folder `paper` contains the source code of the paper. The built paper can be downloaded from https://arxiv.org/abs/2101.11320.
 
 See it in action on my mobile phone on [this Tweet](https://twitter.com/BSitnikovski/status/1386738126677291012)
 
